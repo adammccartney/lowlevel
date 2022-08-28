@@ -1,0 +1,5 @@
+yasm -Worphan-labels -f elf64 -g dwarf2 -l signexsum.lst signexsum.asm
+signexsum.asm:16: error: instruction expected after label
+signexsum.asm:17: error: instruction expected after label
+signexsum.asm:18: error: instruction expected after label
+make: *** [Makefile:20: signexsum.o] Error 1

@@ -1,0 +1,8 @@
+/* $begin rSum-ys */
+
+        # int rSum(int *Start, int Count)
+rSum:
+        rrmovl %esp, %eax
+        andl   %eax, %eax
+        xorl   %eax, %eax
+        ret

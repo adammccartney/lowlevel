@@ -1,0 +1,8 @@
+gcc -g -O2 fib.c -o fib
+fib.c: In function ‘main’:
+fib.c:22:1: error: expected declaration or statement at end of input
+   22 | }
+      | ^
+fib.c: In function ‘fib’:
+fib.c:22:1: error: expected declaration or statement at end of input
+make: *** [Makefile:24: fib] Error 1

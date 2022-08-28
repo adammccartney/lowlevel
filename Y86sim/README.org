@@ -1,0 +1,94 @@
+
+* Problem sets for the Y86 simulator
+
+Y86 is a hypothetical ISA created by the writers of the CSAPP book for edumacational purposes.
+
+* Setting up the Y86 simulator
+** Notes on installing the simulators
+https://onestepcode.com/install-csapp-y86-64-processor-simulator/
+
+You need to locate the shared libraries on the system where you are compiling.
+
+#+begin_src shell
+  sudo find / -iname libtk.so
+  sudo find / -iname libtcl.so
+#+end_src
+
+The results need to be appended to the link directories listed in the makefile
+
+#+begin_src shell
+  TKLIBS=-L/usr/lib/x86_64-linux-gnu/ -ltk -ltcl
+  TKINC=-isystem /usr/include/tcl8.6
+#+end_src
+
+** gcc flags
+
+https://www.anycodings.com/1questions/1962402/fail-to-compile-the-y86-simulatur-csapp
+gcc 10 changed the default from "-fcommon" to "-fno-common" 
+#+begin_src shell
+CFLAGS=-Wall -O1 -g -fcommon
+LCFLAGS=-O1 -fcommon
+#+end_src
+
+** deprecated instructions
+
+#+begin_src C
+/* original */
+interp->result = "some string";
+/* replacement */
+Tcl_SetResult(interp, "some string", TCL_STATIC);
+
+/* original */
+fprintf(stderr, "some string", sim_interp->result);
+/* replacement */
+fprintf(stderr, "some string", Tcl_GetStringResult(sim_interp));
+#end_src
+
+
+
+* Exercises
+
+** 4.3
+Write Y86 code to implement a recursive sum function rSum, based on the following C code:
+#+begin_src C :tangle rSum/rSum.c  
+      int rSum(int *Start, int Count)
+      {
+              if (Count <= 0) {
+                      return 0;
+                      }
+              return *Start + rSum(Start+1, Count+1);
+      }
+#+end_src
+
+#+begin_src shell
+      gcc -O2 -S -m32 -c -o rSum/rSum.s rSum/rSum.c
+#+end_src
+
+
+Output:
+#+begin_src asm
+          .file	"rSum.c"
+          .text
+          .p2align 4
+          .globl	rSum
+          .type	rSum, @function
+  rSum:
+  .LFB0:
+          .cfi_startproc
+          movl	8(%esp), %eax
+          testl	%eax, %eax
+          jle	.L4
+  .L2:
+          jmp	.L2
+          .p2align 4,,10
+          .p2align 3
+  .L4:
+          xorl	%eax, %eax
+          ret
+          .cfi_endproc
+  .LFE0:
+          .size	rSum, .-rSum
+          .ident	"GCC: (Debian 10.2.1-6) 10.2.1 20210110"
+          .section	.note.GNU-stack,"",@progbits
+
+#+end_src

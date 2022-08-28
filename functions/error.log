@@ -1,0 +1,7 @@
+gcc -g -O2 -S -masm=intel fact_dw.c -o fact_dw.s
+gcc -g -O2 fact_dw.c -o fact_dw.o
+gcc -g -O2 fact_dw.o -o fact_dw
+/usr/bin/ld: /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o: in function `_start':
+(.text+0x20): undefined reference to `main'
+collect2: error: ld returned 1 exit status
+make: *** [Makefile:23: fact_dw] Error 1
