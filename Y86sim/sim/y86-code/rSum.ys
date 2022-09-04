@@ -2,7 +2,31 @@
 
         # int rSum(int *Start, int Count)
 rSum:
-        rrmovl %esp, %eax
-        andl   %eax, %eax
-        xorl   %eax, %eax
+        pushl  %ebp
+        rrmovl %esp, %ebp
+        pushl  %ebx
+        irmovl $4, %edi
+        subl   %edi, %esp
+        irmovl $0, %esi
+        rmmovl %esi, 12(%ebp)
+        jg     Rec
+        irmovl  $0, %eax
+        jmp    End
+Rec:
+        mrmovl 8(%ebp), %eax
+        mrmovl (%eax), %eax
+        mrmovl 12(%ebp), %ecx
+        irmovl $-1, %ebx
+        addl   %ebx, %edx    # Count-1
+        irmovl $4, %ebx
+        addl   %ebx, %eax    # Start+1
+        pushl  %edx
+        pushl  %eax
+        call   rSum
+        irmovl $16, %esp
+        addl   %ebx, %eax
+End:
+        mrmovl -4(%ebp), %ebx
+        rrmovl %ebp, %esp
+        popl   %ebp
         ret
