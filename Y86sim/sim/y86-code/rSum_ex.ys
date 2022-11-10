@@ -1,0 +1,53 @@
+/* $begin code-yso */
+/* $begin code-ysa */
+# Execution begins at address 0
+        .pos 0
+init:   irmovl Stack, %esp  # Set up stack pointer
+        irmovl Stack, %ebp  # Set up base pointer
+        call Main           # Execute main program
+        halt                # Terminate the program
+
+# Array of 4 elements
+        .align 4
+array:  .long 0x1
+        .long 0x1
+        .long 0x2
+        .long 0x3
+
+Main:   pushl %ebp
+        rrmovl %esp, %ebp
+        irmovl $4, %eax
+        pushl %eax   # Push 4
+        irmovl array, %edx
+        pushl %edx # Push array
+        call rSum         # rSum(array, 4)
+        rrmovl %ebp,%esp
+        popl %ebp
+        ret
+
+/* $begin rSum-ys 0 */
+        # int rSum(int *Start, int Count)
+rSum:   pushl  %ebp
+        rrmovl %esp, %ebp
+        pushl  %ebx
+        mrmovl 8(%ebp),%ecx   # ecx = Start
+        mrmovl 12(%ebp),%edx  # edx = Count
+        andl   %edx,%edx      # Set condition codes
+        je     End
+Rec:    mrmovl (%ecx), %esi   # get *Start
+        addl   %esi,%eax      # add to sum
+        irmovl $4, %ebx
+        addl   %ebx,%ecx     # Start+1
+        irmovl $-1,%ebx      # 
+        addl   %ebx, %edx    # Count-1
+        jne    Rec           # Stop when 0
+End:    rrmovl %ebp, %esp
+        popl   %ebp
+        ret
+/* $end rSum-ys 0 */
+
+# The stack starts ere and grows to lower addresses
+        .pos 0x100
+Stack:     
+/* $end code-ysa */
+/* $end code-yso */
