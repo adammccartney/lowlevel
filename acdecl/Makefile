@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -Wall -std=c99
+CFLAGS := -ggdb -Wall -std=c99
 LIBS := -lcunit
 
 .PHONY: all test clean

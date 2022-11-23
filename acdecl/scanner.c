@@ -18,15 +18,15 @@ struct scanner {
         const char* current;
 };
 
-struct Scanner scanner;
+struct scanner Scanner;
 
 void initScanner(const char* decl) {
-        scanner.start = decl;
-        scanner.current = decl;
+        Scanner.start = decl;
+        Scanner.current = decl;
 }
 
-enum token_tag classify_string() {
-        char *s = (char*)this.type; /* cast an int to char pointer */
+/* Read the string s and classify it.*/
+enum token_tag classify_string(char * s) {
         /* is type ? */
         if (strcmp(s, "_Bool") == 0) return TOKEN_TYPE;
         if (strcmp(s, "unsigned") == 0) return TOKEN_TYPE;
@@ -48,42 +48,51 @@ enum token_tag classify_string() {
 }
 
 
-/* makeToken could be defined and used to tidy up the output of this function */  
+/* makeToken could be defined and used to tidy up the output of this function */
+struct token make_token(struct token t, int type,
+                        char * string) {
+        t.type = type;
+        strcpy(t.string, string);
+        return t;
+}
 
-struct token gettoken() {
-        char *p;
+
+struct token gettoken(char *p) {
         /* Read past white spaces */
         while ((*p = getchar()) == ' ' || *p == '\t');
 
-        scanner.start = scanner.current;
+        Scanner.start = Scanner.current;
+        struct token t;
         
         /* is alphanumeric */
         if (isalnum(*p)) {
                 /* Type, identifier or qualifier */
-                current.type = classify_string();
+                int toktype;
+                toktype = classify_string(p);
+                t = make_token(t, toktype, p);
         }
 
         /* is single character token */
         if (isPointer(*p)) {
-                current.type = TOKEN_POINTER;
+                t = make_token(t, TOKEN_POINTER, p);
         }
         
         if (*p == '(') { /* Is left Parens */
-                current.type = TOKEN_LEFT_PARENS;
-        }
+                t = make_token(t, TOKEN_LEFT_PARENS, p);
+                }
 
         if (*p == ')') { /* Is right Parens */
-                current.type = TOKEN_RIGHT_PARENS;
+                t = make_token(t, TOKEN_RIGHT_PARENS, p);
         }
 
         if (*p == '[') { /* Is Left Bracket */
-                current.type = TOKEN_LEFT_BRACKET;
+                t = make_token(t, TOKEN_LEFT_BRACKET, p);
         }
 
         if (*p == ']') { /* Is Right Bracket */
-                current.type = TOKEN_RIGHT_BRACKET;
-        }
+                t = make_token(t, TOKEN_RIGHT_BRACKET, p);
+          }
 
         /* Return the newly identified token */
-        return current;
+        return t;
 }
