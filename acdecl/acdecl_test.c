@@ -5,8 +5,9 @@
 #include "scanner.c"
 
 void gettoken_test () {
-        CU_ASSERT_EQUAL(1, 1);
-        CU_ASSERT_EQUAL(2, 1);
+        struct token res;
+        res = gettoken();        
+        CU_ASSERT_EQUAL(res.type, TOKEN_TYPE);
 }
 
 int main() {
