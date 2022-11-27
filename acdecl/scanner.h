@@ -4,7 +4,7 @@
 #include "common.h"
 
 /* typically we would use an enum to store the different types */
-enum token_tag {
+enum TokenTag {
         /* Single-character tokens */
         TOKEN_POINTER,
         /* Non-alphanumeric */
@@ -18,15 +18,14 @@ enum token_tag {
 
 
 /* holds tokens we read before reaching first identifier */
-struct token {
-        enum token_tag type;
-        char string[MAXTOKENLEN];
+struct Token {
+        enum TokenTag type;
+        const char* start;
+        int length;
 };
 
 /* Given a type and a string, form a token using this info. */
-struct token make_token(struct token t, int type,
-                        char* string);
-
+static struct Token make_token(enum TokenTag);
 
 static _Bool isPointer(char c) { return c == '*'; }
 
@@ -34,12 +33,12 @@ static _Bool isPointer(char c) { return c == '*'; }
   look at the current token and
   return a value of "type" "qualifier" or "identifier" in this.type
  */
-enum token_tag classify_string();
+enum TokenTag classify_string();
 
 /* Read the string starting at pointer p.
    Return a newly created token once it has been identified.
  */
-struct token gettoken();
+struct Token gettoken();
 
 /* Initialize the scanner */
 void initScanner(const char* decl);
