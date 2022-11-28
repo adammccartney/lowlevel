@@ -5,8 +5,10 @@
 #include "scanner.c"
 
 void gettoken_test () {
-        struct token res;
-        res = gettoken();        
+        const char* decl = "int";
+        initScanner(decl);
+        struct Token res;
+        res = gettoken();
         CU_ASSERT_EQUAL(res.type, TOKEN_TYPE);
 }
 
