@@ -5,23 +5,27 @@
 
 /* typically we would use an enum to store the different types */
 enum TokenTag {
-        /* Single-character tokens */
-        TOKEN_POINTER,
-        /* Non-alphanumeric */
-        TOKEN_LEFT_PARENS, TOKEN_RIGHT_PARENS,
-        TOKEN_LEFT_BRACKET, TOKEN_RIGHT_BRACKET,
-        /* Multi-char tokens */
-        TOKEN_TYPE, TOKEN_QUALIFIER, TOKEN_IDENTIFIER,
+  /* Single-character tokens */
+  TOKEN_POINTER,
+  /* Non-alphanumeric */
+  TOKEN_LEFT_PARENS,
+  TOKEN_RIGHT_PARENS,
+  TOKEN_LEFT_BRACKET,
+  TOKEN_RIGHT_BRACKET,
+  /* Multi-char tokens */
+  TOKEN_TYPE,
+  TOKEN_QUALIFIER,
+  TOKEN_IDENTIFIER,
 
-        TOKEN_ERROR, TOKEN_EOF
+  TOKEN_ERROR,
+  TOKEN_EOF
 };
-
 
 /* holds tokens we read before reaching first identifier */
 struct Token {
-        enum TokenTag type;
-        const char* start;
-        int length;
+  enum TokenTag type;
+  const char *start;
+  int length;
 };
 
 /* Given a type and a string, form a token using this info. */
@@ -41,6 +45,6 @@ enum TokenTag classify_string();
 struct Token gettoken();
 
 /* Initialize the scanner */
-void initScanner(const char* decl);
+void initScanner(const char *decl);
 
 #endif

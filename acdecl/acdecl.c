@@ -1,11 +1,8 @@
 #include <stdio.h>
 
-       
-
 /* Utility routines */
 
-
-/*  
+/*
 read_to_first_identifier
     gettoken and push it onto the stack until the first identifier is read.
     Print "identifier is", this .string
@@ -29,25 +26,23 @@ deal_with_declarator
     else pop it and print it
 */
 
-
 // main routine
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
 
-        printf("Welcome to adecl, a translator for c declarations.\n");
+  printf("Welcome to adecl, a translator for c declarations.\n");
 
-        //char *p = this.string; 
-        //while ((*p = getchar()) != EOF);
-        //printf("%s", p);
+  // char *p = this.string;
+  // while ((*p = getchar()) != EOF);
+  // printf("%s", p);
 
-        //struct token test;
-        //test.type = TOKEN_LEFT_PAREN;
-        //char* p;
-        //p = strcpy(this.string, input); 
+  // struct token test;
+  // test.type = TOKEN_LEFT_PAREN;
+  // char* p;
+  // p = strcpy(this.string, input);
 
-        //printf("Token: %d, identifier: %s\n", this.type, this.string);
+  // printf("Token: %d, identifier: %s\n", this.type, this.string);
 
-        
-        /* read_to_first_identifier */
-        /* deal_with_declarator */
-        return 0;
+  /* read_to_first_identifier */
+  /* deal_with_declarator */
+  return 0;
 }
