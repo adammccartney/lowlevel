@@ -64,3 +64,4 @@ $(LIB_DIR)/libarithmetic.a: $(BUILD_DIR)/arithmetic.o
 
 clean:
 	rm -rf build
+	rm lib/libarithmetic.a

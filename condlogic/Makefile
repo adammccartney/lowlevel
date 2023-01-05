@@ -1,8 +1,8 @@
 OS := $(shell uname -s)
 
 # directories and stuff
-PROJECT_ROOT := /home/adam/Code/lowlevel
-ARITHMETIC := $(PROJECT_ROOT)/problems/arithmetic/lib
+PROJECT_ROOT := $(HOME)/Code/lowlevel
+ARITHMETIC := $(PROJECT_ROOT)/arithmetic/lib
 
 ifeq ($(OS),Darwin)
    OBJFMT = -f macho64
@@ -25,7 +25,7 @@ all: $(PROGS)
 
 
 fib: fib.c
-	gcc -g -O2 $< -o $@ -L$(ARITHMETIC) -larithmetic
+	gcc -g -O2 $< -o $@ -L $(ARITHMETIC) -l arithmetic
 
 clean:
 	rm -f $(PROGS) *.o *.lst *~ .*.gdb .ebe.*
