@@ -1,21 +1,38 @@
+SHELL := /usr/bin/bash
+
 CC := gcc
 CFLAGS := -ggdb -Wall -std=c99
 LIBS := -lcunit
 
-.PHONY: all test clean
+TEST_DIR := test
+BUILD_DIR := build
 
-all: acdecl acdecl_test
+SOURCES := scanner.c acdecl.c 
+HEADERS := common.h scanner.h
+OBJECTS := $(addprefix $(BUILD_DIR)/, $(notdir $(SOURCES:.c=.o)))
 
-test: acdecl_test
+EXECUTABLES := $(BUILD_DIR)/acdecl $(TEST_DIR)/acdecl_test
 
-acdecl: acdecl.c
-	$(CC) $(CFLAGS) -o $@ $<
+.PHONY: all clean
 
-scanner: scanner.c scanner.h common.h
-	$(CC) $(CFLAGS) -o $@ $<
+all: $(EXECUTABLES)
 
-acdecl_test: acdecl_test.c
-	$(CC) $(CFLAGS) -o $@ $< $(LIBS)
+# Link the executable
+$(BUILD_DIR)/acdecl: $(BUILD_DIR)/acdecl.o
+	@ printf "%8s %-40s %s\n" $(CC) $@ "$(CFLAGS)"
+	@ mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) $< -o $@
+
+# Compile the object files
+$(BUILD_DIR)/%.o: %.c $(HEADERS)
+	@ printf "%8s %-40s %s\n" $(CC) $< "$(CFLAGS)"
+	@ mkdir -p $(BUILD_DIR)
+	@ $(CC) -c $(CFLAGS) -o $@ $<
+
+$(TEST_DIR)/acdecl_test: acdecl_test.c
+	@ printf "%8s %-40s %s\n" $(CC) $@ "$(CFLAGS)"
+	@ mkdir -p $(TEST_DIR)
+	$(CC) $(CFLAGS) $< -o $@ $(LIBS)
 
 clean:
-	rm acdecl acdecl_test
+	rm -rf build test

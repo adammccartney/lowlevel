@@ -8,7 +8,7 @@
 /*  
 read_to_first_identifier
     gettoken and push it onto the stack until the first identifier is read.
-    Print "identifier is", this .string
+    Print "identifier is", this.string
     gettoken
 
 // Parsing routines
