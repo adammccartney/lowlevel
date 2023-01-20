@@ -126,26 +126,21 @@ void print_sizeof(enum Type t)
 
 int main(int argc, char* argv[]) {
 
-    char* type = malloc(MAXCHARS * sizeof(char));
-    char* auxtype = malloc(MAXCHARS * sizeof(char));
-    enum Type t;
-    if ((argc <= 1) || (argc >= 3)) {
+    char* c = NULL;
+    enum Type t = TYPE_UNKNOWN;
+    if (argc != 2) {
         printf("Usage: sizeof <type>");
     }
-    if (argc == 4) {
-        auxtype = strcat(argv[2], argv[3]);
-        type = strcat(argv[1], auxtype);
-    }
-    if (argc == 3) {
-        type = strcat(argv[1], argv[2]);
-    }
     if (argc == 2) {
-        strncpy(type, argv[1], MAXCHARS * sizeof(char));
+        size_t len = strlen(argv[1]) + 1;
+        c = malloc(len);
+        if (c) {
+            memcpy(c, argv[1], len);
+        }
     }
-    t = classify_string(type);
+    t = classify_string(c);
     print_sizeof(t);
-    free(type);
-    free(auxtype);
+    free(c);
     return 0;
 }
 
