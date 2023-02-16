@@ -4,8 +4,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
-#define MAXNUMS 2
+#define MAXLINES 1024
+#define MAXLEN   1024
+#define MAXNUMS  2
 
 uint32_t stack[MAXNUMS];
 int top = -1;
@@ -19,17 +22,36 @@ struct Scanner {
 
 struct Scanner scanner;
 
-void initScanner(const char *decl) {
+void initScanner(const char *decl) 
+{
   scanner.start = decl;
   scanner.current = decl;
 }
 
-static char advance() {
+static char advance() 
+{
 	scanner.current++;
 	return scanner.current[-1];
 }
 
+static _Bool isAtEnd() 
+{
+	return *scanner.current == '\0';
+}
+
+
 static char peek() { return *scanner.current; }
+
+static char peekNext() 
+{ 
+	if (isAtEnd()) return '\0';
+	return scanner.current[1];
+}
+
+_Bool xisalpha(char c)
+{
+	return c>='a' && c<='Z';
+}
 
 static void skipWhitespace() {
   for (;;) {
@@ -67,29 +89,62 @@ struct Tuple_uint32 {
 	uint32_t second;
 };
 
-struct Tuple_uint32 line_one;
+struct Tuple_uint32 data_tuple;
 
 /* We push the data onto the stack as N, M 
  * Read it off as M, N 
  * */
 void initTuple_uint32(const uint32_t stack[]) {
-	line_one.second = pop;
-	line_one.first = pop;
+	data_tuple.second = pop;
+	data_tuple.first = pop;
 }
 
-int main(void)
+/* Invariable for scanning the first line */
+/* We know that we want to read exactly two numbers from line one */
+void scanFirstLine()
 {
-	char* test = "1 2";
-	initScanner(test);
-	while (*scanner.current != '\0') {
-		if (xisnum(*scanner.current)) {
-			push(atoi(scanner.current));
+	int consumed = 0;
+	int numdigits = 0;
+	while (((peek() != '\0') && (peek() != '\n')) 
+	       && (consumed < MAXNUMS)) {
+		/* Here we want to read until we find a whitespace */
+		/* count how many digits we read */
+		if (xisnum(peek())) { 
+			numdigits++;
 			advance();
+		}
+		if ((peekNext() == '\0') || 
+		    (xiswhitespace(peek()) && numdigits != 0)) {
+			/* Found an integer > 9 */
+			/* copy numdigits to buf */
+			char *buf = malloc(sizeof(char) * MAXLEN);
+			memcpy(buf, scanner.start, numdigits);
+			push(atoi(buf));
+			consumed++;
+			numdigits = 0; // reset
+			advance(); // past current whitespace
+			scanner.start = scanner.current;
 		}
 		skipWhitespace();
 	}
 	initTuple_uint32(stack);
-	printf("num lines: %d\n", line_one.first);
-	printf("num persons: %d\n", line_one.second);
+}
+
+
+int main(int argc, char* argv[])
+{
+	FILE *fd = NULL;
+
+	if (argc != 2)
+		printf("Usage: scanner <input.txt>\n");
+	if (argc == 2) /* read input file */
+		fd = fopen(argv[1], "r");
+
+	char* line_one = malloc(sizeof(char) * MAXLEN);
+	line_one = fgets(line_one, MAXLEN, fd);
+	initScanner(line_one);
+	scanFirstLine();
+	printf("%d\n", data_tuple.first);
+	printf("%d\n", data_tuple.second);
 	return 0;
 }
