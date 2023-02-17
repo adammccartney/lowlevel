@@ -1,7 +1,7 @@
 CC := gcc
-CFLAGS := -std=c99 -g -O0 -Wall
+CFLAGS := -std=c11 -g -O0 -Wall
 
-all: scanner
+all: scanner twolines ui
 
 scanner: scanner.c 
 	$(CC) $(CFLAGS) -o scanner scanner.c
@@ -9,6 +9,9 @@ scanner: scanner.c
 twolines:
 	$(CC) $(CFLAGS) -o twolines twolines.c
 
+ui:
+	$(CC) $(CFLAGS) -o ui ui.c
+
 .PHONY:
 clean:
-	rm scanner 
+	rm scanner twolines ui 

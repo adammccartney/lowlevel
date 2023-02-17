@@ -19,7 +19,6 @@ struct Lines lines;
 int main(void)
 {
 	int read = 0;
-	char *dest = NULL;
 	char buf[MAXLEN];
 	do 
 	{
@@ -28,13 +27,11 @@ int main(void)
 			// reading input failed.
 			return 1;
 		}
-		read++;
+		if (read == 0)
+			memcpy(lines.first, buf, MAXLEN);
 		if (read == 1)
-			dest = lines.first;
-		if (read == 2)
-			dest = lines.second;
-		memcpy(dest, buf, MAXLEN);
-	} while (read < 2);
+			memcpy(lines.second, buf, MAXLEN);
+	} while (++read < 2);
 
 	printf("first line : %s", lines.first);
 	printf("second line: %s", lines.second);
