@@ -1,0 +1,196 @@
+* Part of the series on arithmetic and logical operations
+chpt 3 csapp
+** Practice Problem 3.6
+
+Suppose the register %rbx holds value p and %rdx holds value q.
+Fill in the table below with formulas indicating the value that
+will be stored in register %rax for each of the given assembly-code
+instructions.
+
+| instruction               | result               |
+|---------------------------+----------------------|
+| leaq 9(%rdx), %rax        | ~9q~ 9 + q           |
+| leaq (%rdx,%rbx), %rax    | q + p                |
+| leaq (%rdx,%rbx,3), %rax  | q + 3p               |
+| leaq 2(%rbx,%rbx,7), %rax | ~2q + 8~ 2 + 8p      |
+| leaq 0xE(,%rdx,3),%rax    | ~15 + 3q~ 14 + 3q    |
+| leaq 6(%rbx,%rdx,7),%rax  | ~6q + 7p~ 6 + p + 7q |
+
+As an illustration of the use of =leaq= in compiled code,
+consider the following C program:
+
+#+begin_src C
+  long scale (long x, long y, long z) {
+        long t = x + 4 * y + 12 * z;
+        return t;
+  }
+#+end_src
+
+When compiled, the arithmetic operations of the function are
+implemented by a sequence of three =leaq= functions, as is
+documented by the comments on the right-hand side:
+
+#+begin_src asm
+          # long scale(long x, long y, long z)
+          # x in %rdi, y in %rsi, z in %rdx
+  scale:
+          leaq  (%rdi,%rsi,4), %rax  # x + 4*y
+          leaq  (%rdx,%rdx,2), %rdx  # z + 2*z = 3*z
+          leaq  (%rax,%rdx,4), %rax  # (x+4*y) + 4*(4*z) = x + 4*y + 12*z
+          ret
+#+end_src
+
+The ability of the leaq instruction to perform addition and limited forms
+of multiplication proves useful when compiling simple arithmetic expressions
+such as this example.
+
+** Practice Problem 3.7
+Consider the following code, in which we have omitted the expression
+being computed:
+
+#+begin_src C
+  short scale3(short x, short y, short z) {
+        short t = ???
+        return t;
+        }
+#+end_src
+
+
+Compiling the actual function with GCC yields the following assembly code:
+
+#+begin_src asm
+          # short scale3(short x, short y, short z)
+          # x in %rdi, y in %rsi, z in %rdx
+  scale3:
+          leaq  (%rsi,%rsi,9), %rbx     # y + 9*y = 10*y
+          leaq  (%rbx,%rdx), %rbx       # 10*y + z
+          leaq  (%rbx,%rdi,%rsi), %rbx  # (10*y + z) + (x*y)
+          ret
+#+end_src
+
+*** Test program 
+
+
+#+begin_src C :tangle ./scale3.c
+  #include <stdio.h>
+
+  short scale3(short x, short y, short z) {
+            short t = 10 * y + z + x * y;
+            return t;
+      }
+
+  int main(void) {
+          short x, y, z, t;
+          x = 2;
+          y = 3;
+          z = 5;
+          t = scale3(x, y, z);
+          printf("%d\n", t);
+          return 0;
+   }
+#+end_src
+
+** Practice Problem 3.8
+
+Assume the following values are stored at the indicated memory addresses and registers:
+
+| Address | Value | Register | Value |
+|---------+-------+----------+-------|
+|   0x100 |  0xFF | %rax     | 0x100 |
+|   0x108 |  0xAB | %rcx     |   0x1 |
+|   0x110 |  0x13 | %rdx     |   0x3 |
+|   0x118 |  0x11 |          |       |
+
+Fill in the following table showing the effects of the following instructions in terms of both
+the register or memory location that will be updated and the resulting value:
+
+| Instruction             | Destination  |        Value | rough work                                        |
+|-------------------------+--------------+--------------+---------------------------------------------------|
+| addq %rcx,(%rax)        | 0x100        |        0x100 |                                                   |
+| subq %rdx,8(%rax)       | ~%rax~ 0x108 | ~0x105~ 0xA8 |                                                   |
+| imulq $16,(%rax,%rdx,8) | ~%rdx~ 0x118 |        0x110 | 16 * (0x100 + 0x3 * 8) = 16 * (0x118) = 16 * 0x11 |
+| incq 16(%rax)           | ~%rax~ 0x110 | ~0x110~ 0x14 |                                                   |
+| decq %rcx               | %rcx         |          0x0 |                                                   |
+| subq %rdx,%rax          | %rax         |         0xFD | 0x100 - 0x3                                       |
+
+
+** Practice problem 3.9
+
+Suppose we want to generate assembly code for the following C funtion:
+
+#+name: shift_left4_rightn
+#+begin_src C :session :noweb yes
+  long shift_left4_rightn(long x, long n)
+  {
+          x <<= 4;
+          x >>= n;
+          return x;
+  }
+#+end_src
+
+
+The code that follows is a portion of the assembly code that performs
+the actual shifts and leaves the final value in register %rax. Two key
+instructions have been omitted. Parameters x and n are stored in registers
+%rdi and %rsi, respectively
+
+#+begin_src asm
+  # long shift_left4_rightn(long x, long n)
+  # x in %rdi, n in %rsi
+  shift_left4_rightn:
+          movq  %rdi, %rax  # Get x
+          salq  $4,   %rax  # x <<= 4
+          movl  %esi, %ecx  # Get n (4 bytes)
+          sarq   %cl, %rax  # x >>= n
+#+end_src
+
+The right shift should be arithmetic
+
+*** Control program
+
+#+begin_src C :noweb yes :tangle shift_check.c
+  #include <stdio.h>
+
+  <<shift_left4_rightn>>
+
+  int main(void)
+  {
+          long x, y, res;
+          x = 1280;
+          y = 8;
+          res = shift_left4_rightn(x, y);
+          printf("%ld", res);
+          return 0;
+  }
+#+end_src
+
+** Pracice problem 3.10
+
+Consider the following code, in which we have omitted the expression
+being computed:
+
+#+begin_src C
+  short arith3(short x, short y, short z)
+  {
+          short p1 = ---;
+          short p2 = ---;
+          short p3 = ---;
+          short p4 = ---;
+          return p4;
+  }
+#+end_src
+
+The portion of the generated assembly code implementing these expressions
+is as follows:
+
+#+begin_src asm
+  # short arith3(short x, short y, short z)
+  # x in %rdi, y in %rsi, z in %rdx
+  arith3:
+          orq  %rsi, %rdx   # p1 = x | y
+          sarq $9, %rdx     # p1 >> 9
+          notq %rdx         # p3 = ~p2
+          movq %rdx, %bax   #
+          subq %rsi, %rbx   #
+          ret
+#+end_src

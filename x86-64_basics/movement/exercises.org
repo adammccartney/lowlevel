@@ -1,0 +1,74 @@
+** Practice Problem 3.2
+
+*** Question
+
+Exercise is to complete the move instructions on the left.
+The solution assumes that the leftmost operand is the one that
+determines the type of instruction that the line needs.
+
+#+begin_export asm
+movl %eax, (%rsp) ; Move a long into memory pointed to by the stack pointer
+movw (%rax), %dx  ; Move qword from memory to word sized register (aliased)
+movw  $0xFF, %bl  ; Move an immediate word to byte sized register (aliased)
+movb (%rsp,%rdx,4), %dl ; Move a scaled index to byte sized register
+movq (%rdx), %rax
+movw %dx, (%rax)
+#+end_export
+
+
+*** Experiment
+
+We want to do a check to see if it's possible to execute some of the
+instructions noted above. We're going to try to assemble and link the
+following program. We think we kind of know that it's kind of nonsense,
+for instance it will produce a segfault if we run the executable.
+Don't panic, it's just a learning experiment. We want to understand
+if the attempts to carry out the various instructions with the given
+operands will fail or succeed.
+
+
+#+begin_src asm :tangle aliased.s
+  .section .data
+  .section .text
+  .global _start
+  _start:
+          movl %eax, (%rsp)
+          movw (%rax), %dx
+          movb  $0xFF, %bl
+          movb (%rsp,%rdx,4), %dl
+          movq (%rdx), %rax
+          movw %dx, (%rax)
+#+end_src
+
+
+** Pracice Problem 3.3
+
+*** Question 
+The following lines generate error messages, figure out what's wrong
+with each.
+
+#+begin_src asm
+movb $0xF, (%ebx) # possibly we can't move an immediate into memory?
+movl %rax, (%rsp) # this needs to be a movq instruction (64bits)
+movw (%rax),4(%rsp) # can't move memory to memory and wrong size instruction
+movb %al,%sl      # non-existant register, see below
+movq %rax,$0x123  # this needs to be reversed
+movl %eax,%rdx    # can't do a 32bit to 64bit register move
+movb %si, 8(%rbp)          
+#+end_src
+
+*** Experiment
+
+#+begin_src asm :tangle errors.s
+.section .data
+.section .text
+.global _start
+_start:
+  movb $0xF, (%ebx)
+  movq %rax, (%rsp)
+  movq %rax,4(%rsp)
+  movb %al,%sil
+  movq $0x123,%rax
+  movq %rax,%rdx
+  movw %si, 8(%rbp)          
+#+end_src

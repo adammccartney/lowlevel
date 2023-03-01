@@ -1,0 +1,19 @@
+## Practice problem 3.12
+
+Consider the following function for computing the quotient and ramainder of two
+unsigned 64-bit numbers:
+
+#+begin_src C :tangle uremdiv.c
+  void uremdiv(unsigned long x, unsigned log y,
+               unsigned long *qp, unsigned long *rp) {
+          unsigned long q = x/y;
+          unsigned long r = x%y;
+          *qp = q;
+          *rp = r;
+          }
+#+end_src
+
+
+Modify the assembly code shown for signed division to implement this function.
+
+

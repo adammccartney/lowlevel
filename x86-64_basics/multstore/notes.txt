@@ -1,0 +1,4 @@
+See section 3.2.2 from Computer Programs A Programmer's Perspective for more
+info on what is happening here.
+
+> objdump -d prog

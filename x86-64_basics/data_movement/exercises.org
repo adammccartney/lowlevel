@@ -1,0 +1,196 @@
+* Section 3.4 Accessing Information
+
+** Section 3.4.2 zero and sign extending data movement instructions
+
+*** Practice problem 3.2
+
+For each of the following lines of assembly language, determine the
+appropriate instruction suffix based on the operands. (For example,
+mov can be rewritten as movb, movw, movl, or movq).
+
+#+begin_src asm
+  movl %eax, (%rsp)
+  movw (%rax), %dx
+  movb $0xFF, %bl
+  movb (%rsp,%rdx,4), %dl
+  movq (%rdx), %rax
+  movw %dx, (%rax)
+#+end_src
+
+**** Experiment (3.2)
+
+#+begin_src asm :tangle extensions.s
+  .section .data
+  .section .text
+  .global _start
+  _start:
+          movl %eax, (%rsp)
+          movw (%rax), %dx
+          movb $0xFF, %bl
+          movb (%rsp,%rdx,4),%dl
+          movq (%rdx), %rax
+          movw %dx, (%rax)
+#+end_src
+
+
+The section introduces an illustration of 
+
+#+name: exchange
+#+begin_src C :session :noweb yes 
+  long exchange(long *xp, long y) {
+        long x = *xp;  // Initialize new long with contents of xp
+        *xp = y;       // Point xp at y
+        return x;      // Value that was moved into y
+ }
+#+end_src
+
+#+begin_src asm
+  # long exchange(long *xp, long y)
+  # xp in %rdi, y in %rsi
+  exchange:
+        movq (%rdi), %rax  # Get x at xp. Set as return value
+        movq %rsi, (%rdi)  # Store y at xp.
+        ret                # Return
+#+end_src
+
+
+
+Let's just write a small c program to test that the exchange
+program does what we think it does.
+
+#+begin_src C :tangle exchange.c :noweb yes
+  #include "stdio.h"
+  <<exchange>>
+
+  int main(void) {
+          long o = 0xFFFF;
+          long *p = &o;
+          long v = 0x01FF;
+          printf("Before: o: %ld, v: %ld\n", o, v);
+          v = exchange(p, v);
+          printf("After: o: %ld, v: %ld\n", o, v);
+          return 0;
+    }
+#+end_src
+
+
+Okay, so that seems clear enough, let's try an exercise.
+
+** Practice Problem 3.4
+
+Assume variables sp and dp are declared with types
+
+#+begin_src C
+  src_t *sp;
+  dest_t *dp;
+#+end_src
+
+Where =src_t= and =dest_t= are data types declared with
+=typedef=. We wish to use the appropriate pair of data movement
+instructions to implement the operation:
+
+#+begin_src C
+*dp = (dest_t) *sp;
+#+end_src
+
+Assume the values of sp and dp are stored in registers %rdi
+and %rsi.
+
+| src_t         | dest_t        | Instruction              | Comments                  |
+|---------------+---------------+--------------------------+---------------------------|
+| long          | long          | movq (%rdi), %rax        | Read 8 Bytes              |
+|               |               | movq %rax, (%rsi)        | Store 8 bytes             |
+| char          | int           | movsbl (%rdi), %eax      | Convert char to int       |
+|               |               | movl %eax, (%rsi)        | Store 4 bytes             |
+| char          | unsigned      | movsbl (%rdi),%eax       | Convert char to int       |
+|               |               | movl %dl, (%rsp,%rsi,4)  | Store 4 bytes             |
+| unsigned char | long          | movbzbl (%rdi),%eax      | Read byte and zero-extend |
+|               |               | movq %edi, (%rsp,%rsi,8) | Store 8 Bytes             |
+| int           | char          | movl (%rdi),%eax         | Read 4 bytes              |
+|               |               | movb %al,(%rsi)          | Stoe low-order byte       |
+| unsigned      | unsigned char | movl (%rdi),%eax         | Read 4 bytes              |
+|               |               | movb %al,(%rsi)          | Store low-order byte      |
+| char          | short         | movsbw (%rdi),%ax        | Read byte and sign-extend |
+|               |               | movw %ax,(%rsi)          | Store 2 bytes             |
+
+*** Experiment
+
+Note: this compiles, but it contains incorrect answers to the exercise.
+I was clearly missing the bits about zero and sign extending.
+#+begin_src asm :tangle exchanges.s
+  .section .data
+  .section .text
+  .global _start
+  _start:
+          movq (%rdi), %rax
+          movq %rax, (%rsi)
+          movl (%edi), %eax
+          movq %rax, (%esi)
+          movb (%rsp,%rdx,4),%dil
+          movb %dil, (%rsp,%rdx,4)
+          movl (%rsp,%rdx,4),%edi
+          movl %edi, (%rsp,%rsi,4)
+          movb (%rsp,%rdi,4),%dil
+          movb %dil,(%rsp,%rsi,4)
+          movb (%rsp,%rdx,4),%dl 
+          movb %dl,(%rsp,%rsi,4)
+  #+end_src
+
+
+
+** Practice Problem 3.5
+
+You are given the following information. A function with a prototype
+
+#+begin_src C
+void decode1(long *xp, long *yp, long *zp);
+#+end_src
+
+is compiled into assembly code, yielding the following:
+
+#+begin_src asm
+  # void decode1(long *xp, long *yp, long *zp);
+  # xp in %rdi, yp in %rsi, zp in %rdx
+  decode1:
+          movq (%rdi), %r8      # move quad word from addressinto register
+          movq (%rsi), %rcx     # move from 
+          movq (%rdx), %rax
+          movq %r8, (%rsi)
+          movq %rcx, (%rdx)
+          movq %rax, (%rdi)
+          ret
+#+end_src
+
+
+#+begin_src C :tangle decode1.c
+  #include <stdio.h>
+
+  void decode1(long *xp, long *yp, long*zp) {
+          long loc1, loc2, loc3;  // define three local variables
+          /* xp in %rdi, yp in %rsi, zp in %rdx */         
+          loc1 = *xp;
+          loc2 = *yp;
+          loc3 = *zp;
+          /* store loc1 in memory at *yp */
+          ,*yp = loc1;
+          /* store loc2 in memory at *zp */
+          ,*zp = loc2;
+          /* store loc3 in memory at *xp */
+          ,*xp = loc3;
+  }
+
+  int main(void) {
+          long x, y, z;
+          x = 0xFFFFFFFF;
+          y = 0xEEEEEEEE;
+          z = 0xDDDDDDDD;
+          long *xp, *yp, *zp;
+          xp = &x;
+          yp = &y;
+          zp = &z;
+          decode1(xp, yp, zp);
+
+          printf("*xp: %ld\t*yp: %ld\t*zp: %ld", *xp, *yp, *zp);
+          return 0;
+          }
+#+end_src
