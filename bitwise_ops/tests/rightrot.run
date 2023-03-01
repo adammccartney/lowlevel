@@ -1,0 +1,5 @@
+./rightrot 16 2
+./rightrot 75 3
+./rightrot 157 2
+./rightrot 365 4
+./rightrot 601 5
