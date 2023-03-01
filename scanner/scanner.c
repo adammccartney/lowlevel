@@ -69,9 +69,8 @@ void pushNums(char* buf, int expected)
 			success = 1;
 		}
 		count++;
-		push(val);
+		push(val); /* Push the last value onto the stack. */
 	} while ((!success) && (count < expected));
-	//push(val); /* Push the last value onto the stack. */
 }
 
 int main(int argc, char* argv[])
