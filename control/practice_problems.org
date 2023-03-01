@@ -1,0 +1,661 @@
+* Computer Systems A Programmer's Perspective, section 3 control structures
+
+
+** Practice problem 3.13 (csapp)
+
+Consider the block
+#+name: compfun
+#+begin_src C :session :noweb yes
+  int comp(data_t a, data_t b) {
+          return a COMP b;
+  }
+#+end_src
+
+#+name: mainfun
+#+begin_src C :session :noweb yes
+  int main(int argc, char **argv){
+        data_t a = 0;
+        data_t b = 0;
+        comp(a, b);
+        exit(0);
+      }
+#+end_src
+
+Assume that we can define src_C{data_t} with a src_C{typedef} declaration and the comparison
+src_C{COMP} with a src_C{#define} declaration.
+
+Suppose src_C{a} is in src_asm{%edx} and src_C{b} is in src_asm{%eax}. For each of the following
+instruciton sequences, determine which data types src_C{data_t} and which comparisons src_C{COMP}
+could cause the compiler to generate this code. (There can be multiple correct answers; list them all)
+
+See also the table in [[id:df4c2469-1c33-4524-b75a-4a504f7e5999][c types]] 
+
+*** Control example
+
+#+begin_src C :noweb yes :tangle src/control.c
+  #include "stdlib.h"
+  typedef int data_t;
+  # define COMP <
+
+  <<compfun>>
+
+  <<mainfun>>
+#+end_src
+
+*** A
+#+begin_src asm
+  cmpl    %eax, %edx
+  setl    %al
+#+end_src
+
+#+begin_src C :noweb yes :tangle src/A.c
+  #include "stdlib.h"
+
+  typedef long data_t;  
+  # define COMP <
+
+  <<compfun>>
+  
+  <<mainfun>>
+#+end_src
+
+*** B
+#+begin_src asm
+  cmpw  %ax, %dx
+  setge %al
+#+end_src
+
+#+begin_src C :noweb yes :tangle src/B.c
+  #include "stdlib.h"
+
+  typedef short data_t;
+  #define COMP >=
+
+  <<compfun>>
+
+  <<mainfun>>
+#+end_src
+
+
+*** C
+
+#+begin_src asm
+  cmpb %al, %dl
+  setb %al
+#+end_src
+
+#+begin_src C :noweb yes :tangle src/C.c
+  #include "stdlib.h"
+
+  typedef unsigned char data_t;
+  #define COMP <
+
+  <<compfun>>
+
+  <<mainfun>>
+#+end_src
+
+
+#+begin_src C :noweb yes :tangle src/C2.c
+  #include "stdlib.h"
+
+  typedef _Bool data_t;
+  #define COMP <
+
+  <<compfun>>
+
+  <<mainfun>>
+#+end_src
+
+
+#+begin_src C :noweb yes :tangle src/C3.c
+  #include "stdlib.h"
+
+  typedef unsigned char data_t;
+  #define COMP <
+
+  <<compfun>>
+
+  <<mainfun>>
+#+end_src
+
+*** D
+
+#+begin_src asm
+  cmpl    %eax, %edx
+  setne   %al
+#+end_src
+
+
+
+#+begin_src C :noweb yes :tangle src/D.c
+  #include "stdlib.h"
+
+  typedef long data_t;
+  #define COMP !=
+
+  <<compfun>>
+
+  <<mainfun>>
+#+end_src
+
+
+#+begin_src C :noweb yes :tangle src/D2.c
+  #include "stdlib.h"
+
+  typedef unsigned long data_t;
+  #define COMP !=
+
+  <<compfun>>
+
+  <<mainfun>>
+#+end_src
+
+
+** Practice problem 3.14 (csapp)
+
+Consider
+#+name: testfun
+#+begin_src C :session :noweb yes
+  int test(data_t a) {
+        return a TEST 0;
+      }
+#+end_src
+
+This shows a general comparison between argument a and 0, where we can set the data type
+of the argument by declaring src_C{data_t} with a src_C{typedef}, and the nature of the
+comparison by declaring src_C{TEST} with a src_C{#define} declaration. For each of the
+following instruction sequences, determine which data types src_C{data_t} and which
+comparisons src_C{TEST} could cause the compiler to generate this code. (There can be
+multiple correct answers; list all the correct ones).
+
+
+*** A
+
+#+begin_src asm
+  testl  %eax, %eax
+  setne  %al
+#+end_src
+
+#+begin_src C  :noweb yes :main no :tangle src/test_A.c
+  typedef long data_t;
+  # define TEST !=
+
+  <<testfun>>
+#+end_src
+
+
+#+begin_src C  :noweb yes :main no :tangle src/test_A2.c
+  typedef int data_t;
+  # define TEST !=
+
+  <<testfun>>
+#+end_src
+
+
+
+#+begin_src C  :noweb yes :main no :tangle src/test_A3.c
+  typedef int* data_t;
+  # define TEST !=
+
+  <<testfun>>
+#+end_src
+
+
+*** B
+#+begin_src asm
+  testw %ax, %ax
+  sete
+#+end_src
+
+
+#+begin_src C  :noweb yes :main no :tangle src/test_B.c
+  typedef short data_t;
+  # define TEST ==
+
+  <<testfun>>
+#+end_src
+
+
+#+begin_src C  :noweb yes :main no :tangle src/test_B2.c
+  typedef unsigned short data_t;
+  # define TEST ==
+
+  <<testfun>>
+#+end_src
+
+
+*** C
+
+#+begin_src asm
+  testb  %al, %al
+  setg   %al
+#+end_src
+
+
+
+#+begin_src C  :noweb yes :main no :tangle src/test_C.c
+  typedef char data_t;
+  # define TEST >
+
+  <<testfun>>
+#+end_src
+
+** Practice Problem 3.15
+
+In the following excerpts from a dissasembled binary, some of the information has
+been replaced by X's. Answer the following questions about these instructions
+
+*** A
+What is the target of the src_asm{je} instruction below? (You do not need to know
+anything about the src_asm{callq} instruction here.)
+
+Attempt: 
+#+begin_src asm
+  4003fa: 74 02           je      4003fe <loop+0x4003fe>
+  4003fc: ff d0           callq   *%rax
+#+end_src
+
+*** B
+What is the target of the je instruction below?
+
+Attempt:
+#+begin_src asm
+  40042f: 74 f4           je      400433 <loop+0x400433>
+  400431: 5d              pop     %rbp        
+#+end_src
+Correction:
+#+begin_src asm
+  40042f: 74 f4           je      400425 <loop+0x400423>
+  400431: 5d              pop     %rbp        
+#+end_src
+Explanation:
+According to the dissasembled output, the byte address of the jump target is
+0x400431 + 0xf4
+
+0xf4 is -12 in two's complement notation, so the target is: 0x400425
+
+
+*** C
+What is the address of the src_asm{ja} and arc_asm{pop} instructions?
+#+begin_src asm
+  400543: 77 02           ja      400547 <loop+0x400543>
+  400545: 5d              pop     %rbp
+#+end_src
+
+
+*** D
+In the code that follows, the jump target is encoded in a PC-relative form
+as a 4-byte two's complement number. The bytes are listed from least significant
+to most, reflecting the little-endian byte ordering of x86-64. What is the address
+of the jump target?
+
+#+begin_src asm
+
+  4005e8: e9 73 ff ff ff  jmpq    XXXXXX
+  4005ed: 90              nop
+#+end_src
+Solution:
+The target offset is 0xffff 0xff73
+
+
+* Goto programming
+** Practice Problem 3.16
+
+#+begin_src C
+  void cond(short a, short *p)
+        {
+                if (a && *p < a)
+                        *p = a;
+        }
+#+end_src
+
+GCC generates:
+
+#+begin_src asm
+  cond:
+          testq    %rdi, %rdi
+          je       .L1
+          cmpq     %rsi, (%rdi)
+          jle      .L1
+          movq     %rdi, (%rsi)
+  .L1
+          rep; ret
+#+end_src
+
+A. Write a goto version in C that performs the same computation
+and mimics the control flow of the assembly code, in the style
+shown in Figure 3.16(b). You might find it helpful to annotate the assembly code
+as we have done in our examples.
+
+#+begin_src C         
+void cond (short a, short *p) 
+{
+	if (a == 0)
+		goto done; 
+	if (a >= *p)
+		goto done;
+	*p = a;
+done:
+	return;
+}
+#+end_src
+
+** Practice Problem 2.17
+
+Here is an alternate rule for translating if statements to goto code:
+
+  t = test-expr;
+  if (t)
+      goto true;
+  else-statement;
+  goto done;
+true:
+  then-statement
+done:
+
+
+    #+begin_src C
+      long lt_cnt = 0;
+      long ge_cnt = 0;
+   
+      long absdiff_se(long x, long y)
+          {
+                  long result;
+                  if (x < y) {
+                          lt_cnt++;
+                          result = y - x;
+                  }
+                  else {
+                          ge_cnt++;
+                          result = x - y;
+                  }
+                  return result;
+          }
+    #+end_src
+
+
+  Alternate goto version:
+
+  see file: adsdiff_ge_goto.c
+
+
+** Practice Problem 3.18
+
+#+begin_src asm
+  # short test (short x, short y, short z)
+  # x in %rdi, y in %rsi, z in %$rdx
+  test:
+          leaq   (%rdx,%rsi), %rax  # val = y+z
+          subq   %rdi, %rax         # val - x
+          cmpq   $5, %rdx           # if z > 5
+          jle    .L2                # goto L2
+          cmpq   $2, %rsi           # if y > 2
+          jle    .L3                # goto L3
+          movq   %rdi, %rax         # val = x
+          idivq  %rdx, %rax         # val / z
+          ret
+  .L3:
+          movq   %rdi, %rax         # val = x
+          idivq  %rsi, %rax         # val / y
+          ret
+  .L2:
+          cmpq   $3, %rdx           # if x > 3
+          jge    .J4                # goto L4
+          movq   %rdx, %rax         # val = z
+          idivq  %rsi, %rax         # val / y
+  .L4:
+          rep; ret
+
+#+end_src
+
+
+
+* Prediciton
+
+Assume the probability of misprediction is $p$, the time to execute the code
+without misprediction is $T_{OK}$, and the misprediction penalty is $T_{MP}$. Then
+the average time to execute the code as a function of $p$ is:
+
+$T_{avg}(p) = (1-p)T_{OK} + p(T_{OK} + T_{MP}) = T_{OK} + pT_{MP}$.
+
+We are given $T_{OK} and $T_{ran}$, the average time when $p=0.5$, and we
+want to determine $T_{MP}$. Substituting into the equation, we get
+$T_{ran} = T_{avg}(0.5) = T_{OK} + 0.5T_{MP}$, and therefor $T_{MP} = 2(T_{ran} - T_{OK})$.
+So, for $T_{OK} = 8$ and $T_{ran} = 17.5$, we get $T_{MP} = 19$.
+
+** Practice Problem 3.19
+
+Running on a new processor model, our code required around 45 cycles when
+the branching pattern was random, and around 25 cycles when the pattern
+was highly predictable.
+
+A. What is the approximate miss penalty?
+
+$T_{ran} = T_{avg}(0.5) = T_{OK} + (0.5)T_{MP}$
+
+$T_{MP} = 2(T_{ran} - T_{OK})$
+
+$T_{MP} = 2(45 - 25) = 2(20) = 40$cycles
+
+B. How many cycles would the function require when the branch is mispredicted?
+25 + 40 = 65
+
+
+
+** Practice Problem 3.20
+
+In the following C function, we have left the definition of operation OP incomplete:
+
+#+begin_src C
+  #define OP __________ /* Unknown operator */
+
+  short arith(short x)
+  {
+                  return x OP 16;
+  }
+#+end_src
+
+
+When compiled, GCC generates the following assembly code:
+
+#+begin_src asm
+  # x in %rdi
+  arith:
+          leaq    15(%rdi), %rbx   # v = x + 15
+          testq   %rdi, %rdi       # test x
+          cmovns  %rdi, %rbx       # if x >= 0, 
+          sarq    $4, %rbx         # v = v >> 4
+          ret                      # return v
+#+end_src
+
+A. What operation is OP?
+B. Annotate the code to explain how it works
+
+
+** Practice Problem 3.21
+
+Starting with C code of the form
+
+#+begin_src C
+  short test(short x, short y)
+        {
+                short val = ___;
+                if (___) {
+                        if (___) /* .L2 */
+                                val = ___;
+                        else
+                                val = ___;
+                } else if (___)     
+                        val = ___;
+                  return val;
+        }
+#+end_src
+
+
+GCC generates the following assembly code:
+
+#+begin_src asm
+   # short test(short x, short y)
+   # x in %rdi, y in %rsi
+   test:
+           leaq    12(%rsi), %rbx   # *sy + 12
+           testq   %rdi, %rdi       # if (x == 0)
+           jge     .L2              # if (x >= 0) goto .L2
+           movq    %rdi, %rbx       # val = x
+           imulq   %rsi, %rbx       # val *= y
+           movq    %rdi, %rdx       # a = x
+           orq     %rsi, %rdx       # a = y | x
+           cmpq    %rsi, %rdi       # 
+           cmovge  %rdx, %rbx       # if ((x <= y)
+           ret                      # val = y | x
+  .L2:
+           idivq   %rsi, %rdi       # tmp = y / x
+           cmpq    $10, %rsi        # if ((tmp) >= 10)
+           cmovege %rdi, %rbx       # val = tmp
+           ret
+#+end_src
+
+** Practice Problem 3.22
+
+A. Try to calculate 14! with a 32-bin int. Verify whether the computation of 14!
+   overflows.
+B. What if the computation is done with a 64-bit long int?
+
+
+** Practice Problem 3.23
+
+For the C code
+
+#+begin_src C
+  short dw_loop(short x)
+        {
+                short y = x/9;
+                short *p = &x;
+                short n = 4*x;
+                do {
+                        x += y;
+                        (*p) += 5;
+                        n -= 2;
+                } while(n > 0);
+                return x;
+         }
+#+end_src
+
+GCC generates the following assembly code
+
+#+begin_src asm
+  # x initially in %rdi
+  dw_loop:
+          movq   %rdi, %rbx           # val = x
+          movq   %rdi, %rcx           # y = x
+          idivq  $9, %rcx             # y = y/9
+          leaq   (,%rdi,4),%rdx       # n = 4*x
+  .L2:
+          leaq   5(%rbx,%rcx), %rcx   # y = 5+x+y
+          subq   $2, %rdx             # n-=2
+          testq  %rdx,%rdx            # n == 0
+          jg     .L2                  # If > 0, goto loop
+          rep; ret                    # Return
+#+end_src
+
+A. Which registers are used to hold program values x, y and n?
+B. How has the compiler eliminated the need for pointer variable
+   p and the pointer dereferencing implied by the expression src_C{(*p) += 5}?
+C. Add annotations to the assembly code decribing the operation of the program
+   similar to those shown in Figure 3.19(c).
+
+* Jump to middle translation
+   
+** Practice Problem 3.24
+
+For C code having the general form
+
+#+begin_src asm
+  short loop_while(short a, short b)
+  {
+          short result = ___;
+          while (___) {
+              result = ___;
+              a = ___;
+          }
+          return result;
+  }
+#+end_src
+
+
+GCC, run with command-line option -Og, produces the following code:
+
+#+begin_src asm
+  # a in %rdi, b in %rsi
+  loop_while:
+          movl  $0, %eax             res = 0
+          jmp   .L2                  goto test
+  .L3:                              loop:
+          leaq  (,%rsi,%rdi), %rdx     var = a + b
+          addq  %rdx, %rax             res += var
+          subq  $1,%rdi                a -= 1
+  .L2:                              test:
+          cmpq  %rsi, %rdi          if (b < a) 
+          jq    .L3                    goto loop
+          rep; ret
+#+end_src
+
+* Guarded do translation
+
+#+begin_src
+  t = test-expr
+  if (!t)
+     goto done;
+  do
+      body-statement
+      while (test-expr);
+  done:
+#+end_src
+
+As a goto version
+
+#+begin_src
+  t = test-expr;
+  if (!t)
+      goto done;
+  loop:
+      body-statement
+      t = test-expr;
+      if (t)
+          goto loop;
+  done:
+#+end_src
+
+** Practice problem 3.25
+#+begin_src C
+  long loop_while2(long a, long b)
+        {
+                long result = ___;
+                while (___) {
+                        result = ___;
+                        b = ___;
+                }
+                return result;
+        }
+#+end_src
+
+GCC, run with the command-line option -O1, produces the following code:
+#+begin_src asm
+  # a in %rdi, b in %rsi
+  loop_while2:
+          testq   %rsi, %rsi   # 
+          jle     .L8          # if (b <= 0) goto .L8
+          movq    %rsi, %rax   # result = b   
+  .L7:
+          imulq   %rdi, %rax   # result *= a
+          subq    %rdi, %rsi   # b = b - a
+          testq   %rsi, %rsi   
+          jg      .L7          # if (b > 0) goto .L7
+  .L8:
+          movq    %rsi, %rax   # result = b
+          ret                  # return result
+#+end_src
+
+
+** Practice Problem 3.26

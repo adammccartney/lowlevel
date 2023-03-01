@@ -1,0 +1,27 @@
+	.file	"while2.c"
+	.text
+	.globl	loop_while2
+	.type	loop_while2, @function
+loop_while2:
+	pushq	%rbp
+	movq	%rsp, %rbp
+	movq	%rdi, -24(%rbp)
+	movq	%rsi, -32(%rbp)
+	movq	-32(%rbp), %rax
+	movq	%rax, -8(%rbp)
+	jmp	.L2
+.L3:
+	movq	-8(%rbp), %rax
+	imulq	-24(%rbp), %rax
+	movq	%rax, -8(%rbp)
+	movq	-24(%rbp), %rax
+	subq	%rax, -32(%rbp)
+.L2:
+	cmpq	$0, -32(%rbp)
+	jg	.L3
+	movq	-8(%rbp), %rax
+	popq	%rbp
+	ret
+	.size	loop_while2, .-loop_while2
+	.ident	"GCC: (GNU) 12.2.1 20221121 (Red Hat 12.2.1-4)"
+	.section	.note.GNU-stack,"",@progbits
