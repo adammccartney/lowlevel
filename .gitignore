@@ -1,3 +1,6 @@
 # objects
 *.o
 *.yo
+
+# binary images generated from org files
+*.png
