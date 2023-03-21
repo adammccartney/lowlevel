@@ -8,8 +8,8 @@ SOURCE_DIR := src
 
 SOURCES := $(wildcard $(SOURCE_DIR)/*.c)
 ASMFILES := $(addprefix $(BUILD_DIR)/, $(notdir $(SOURCES:.c=.s)))
-ASMFILES += conditional_data_transfer.s more_control.s while.s while2.s
-EXECUTABLES := fact_over
+ASMFILES += conditional_data_transfer.s more_control.s while.s while2.s test_one.s
+EXECUTABLES := fact_over fibonacci_goto
 
 all: $(ASMFILES)
 
@@ -26,10 +26,16 @@ more_control.s: more_control.c
 fact_over: fact_over.c 
 	$(CC) -O0 -o $@ $^
 
+fibonacci_goto: fibonacci_goto.c 
+	$(CC) -O0 -o $@ $^
+
 while.s: while.c 
 	$(CC) -Og -S -o $@ $^
 
 while2.s: while2.c 
+	$(CC) -O1 -S -o $@ $^
+
+test_one.s: test_one.c 
 	$(CC) -O1 -S -o $@ $^
 
 .PHONY: default
