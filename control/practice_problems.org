@@ -657,5 +657,424 @@ GCC, run with the command-line option -O1, produces the following code:
           ret                  # return result
 #+end_src
 
-
 ** Practice Problem 3.26
+
+A function test_one has the following overall structure:
+
+#+begin_src C
+  short test_one(unsigned short x)
+        {
+                short val = 1;
+                while (...) {
+                        .
+                        .
+                        .
+                }
+                return ...;
+        }
+#+end_src
+
+The GCC C compiler generates the following assembly code:
+
+#+begin_src asm
+  # x in %rdi
+  test_one:
+        movl    $1, %eax    # val = 1
+        jmp     .L5
+  .L6:
+        xorq    %rdi, %rax  # val = x ^ val;
+        shrq    %rdi        # x = x >> 1 Shift right by 1
+  .L5:
+        testq   %rdi, %rdi  # 
+        jne     .L6         # while (x != 0)
+        andl    $0, %eax    # 0 & val
+        ret
+#+end_src
+
+Reverse engineer the operation of this code and then do the following:
+
+A. Determine what loop translation method was used.
+B. Use the assembly-code version to fill in the missing parts of the C code.
+C. Describe in English what this function computes.
+
+A. Jump to middle
+B. see test_one.c
+C. It computes the partiy of argument x. It returns 1 if there is an odd
+   number of ones in x and 0 if there is an even number.
+
+* For loops
+
+Go understand how the assembly gets compiled, first translate to a while loop.
+The C language states (with one exception, see Problem 3.29) that the behavior
+of a for loop is identical to the following code using a while loop:
+
+#+begin_src
+  init-expr;
+  while (test-expr) {
+      body-statement;
+      update-expr;
+  }
+#+end_src
+
+Two possible strategies
+
+** Jump to middle
+
+#+begin_src
+  init-expr;
+  goto test;
+loop:
+  body-statement
+  update-expr;
+test:
+  t = test-expr;
+  if (t)
+      goto loop;
+#+end_src
+
+** Guarded-do strategy
+
+#+begin_src
+  init-expr
+  t = test-expr;
+  if (!t)
+      goto done;
+loop:
+  body-statement;
+  update-expr;
+  t = test-expr;
+  if (t)
+      goto loop;
+done:
+#+end_src
+
+** Practice problem 3.27
+
+Write goto code for a function called fibonacci to print fibonacci numbers
+using a while loop. Apply the guarded-do transformation.
+
+- See fibonacci_goto.c
+
+
+** Practice Problem 3.28
+
+A function test_two has the following overall structure:
+
+#+begin_src C
+  short test_two(unsigned short x)
+          {
+                  short val = 0;
+                  short i;
+                  for (...;...;...) {
+                          .
+                          .
+                          .
+                  }
+                  return val;
+          }        
+#+end_src
+
+
+The GCC C compiler generates the following assembly code:
+
+#+begin_src asm
+  # x in %rdi
+  # WARNING: buggy code
+  test_two:
+          movl   $1, %edx    # i = 1
+          movl   $65, %eax   # b = 65
+  .L10:
+          movq   %rdi, %rcx  # val = x
+          andl   $1, %ecx    # 1 & (int)val
+          addq   %rax, %rax  # b *= 2
+          orq    %rcx, %rax  # val |= b 
+          shrq   %rdi        # Shift right by 1
+          addq   $1, %rdx    # x += 1
+          jne    .L10        # if (a > 0)
+          rep; ret           # 
+#+end_src
+
+Reverse engineer the operation of this code and then do the following:
+
+A. Use the assembly code version to fill the missing parts of the C code
+-> see test_two.c for solution (corrected from book)
+
+B. Explain why there is netiher an initial test before the loop nor an
+   initial jump to the test portion of the loop.
+-> The compiler decided that 
+
+C. Describe in English what the function computes.
+-> The function reverses the bits in x, creating a mirror image
+
+
+** Practice problem 3.29
+
+Executing a continue statement in C causes the program to jump to the
+end of the current loop iteration. The stated rule for translating a
+for loop into a while loop needs some refinement when dealing with continue
+statements. For example, consider the following code:
+
+#+begin_src C
+  /* Example of for loop containing a continue statement */
+  /* Sum even numbers between 0 and 9 */
+  long sum = 0;
+  long i;
+  for (i = 0; i < 10; i++) {
+          if (i & 1)
+                  continue;
+          sum+=i;
+  }
+#+end_src
+
+A. What would we get if we naively applied our rule for translating the
+for loop into a while loop? What would be wrong with this code?
+
+Following the outline of the book, we identify the different components
+of the for loop as follows:
+
+| /init-expr/      | i = 0      |
+| /test-expr/      | i < 10     |
+| /update-expr/    | i++        |
+| /body-statement/ | if (i & 1) |
+| /body-statement/ | continue   |
+| /body-statement/ | sum+=i     |
+
+
+As outlined above, the C standard states the following structure for a while
+loop:
+
+#+begin_src 
+/init-expr/
+while (/test-expr/) {
+    /body-statement/
+    /update-expr/;
+}
+#+end_src
+
+In the naive solution we end up with a situation where the /update-expr/ only
+gets applied for even numbers.
+#+begin_src C
+  long sum = 0;
+  long i;
+  while (i < 10) {
+          if (i & 1)
+                  continue;
+          sum+=i;
+          i++;
+  }
+#+end_src
+
+*** Jump to middle strategy
+
+#+begin_src
+  /init-expr/
+  goto test;
+loop:
+  /body-statement/
+  /update-expr/
+test:
+  t = /test-expr/
+  if (t)
+      goto loop;
+#+end_src
+
+*** Guarded do strategy
+
+#+begin_src
+  /init-expr/
+  t = /test-expr/
+  if (!t)
+      goto done;
+loop:
+  /body-statement/
+  /update-expr/;
+  t = /test-expr/;
+  if (t)
+      goto loop;
+done:
+#+end_src
+
+B. How could you replace the continue statement with a goto satement to
+ensure that the while loop correctly duplicates the behavior of the for loop?
+
+#+begin_src C
+  /* Correct translation for of for loop into while loop */
+  long sum = 0;
+  long i;
+  while (i < 10) {
+          if (i & 1)
+                  goto update;
+          sum+=i;
+  update:
+          i++;
+  }
+#+end_src
+
+* Switch Statements
+
+** Practice Problem 3.30
+
+#+begin_src C
+  void switch2(short x, short *dest)
+        {
+                short val = 0;
+                switch(x) {
+                        .
+                        . /* Body of switch statement omitted */
+                        .
+                }
+                *dest = val;
+        }
+#+end_src
+
+In compiling the function, GCC generates the assembly code that follows
+for the initial part of the procedure, with variable x in %rdi
+
+#+begin_src asm
+  # void switch2(short x, short *dest)        
+  # x in %rdi
+  switch2:
+          addq  $2, %rdi      # index = x + 2
+          cmpq  $8, %rdi      # Compare index:6
+          ja    .L2           # If >, goto loc_def
+          jmp   *.L4(,%rdi,8) # Goto *jg[index]
+  .L5:
+  .L6:
+  .L7:
+  .L8:
+  .L9:
+  .L2                         # done:
+          movq  %rdi, (%rdx)  #    *dest = val
+#+end_src                         
+
+It generates the following code for the jump table:
+
+#+begin_src asm
+  .L4:
+          .quad  .L9   # loc_def
+          .quad  .L5   # loc_A
+          .quad  .L6   # loc_B
+          .quad  .L7   # loc_C
+          .quad  .L2   # loc_D
+          .quad  .L7   # loc_C
+          .quad  .L8   # loc_E
+          .quad  .L2   # loc_D
+          .quad  .L5   # loc_A
+#+end_src
+
+
+#+begin_src C
+    void switch2(short x, short* dest)
+    {
+            /* Table of code pointers */
+            static void* jt[9] = {
+                    &&loc_def, &&loc_A, &&loc_B,
+                    &&loc_C, &&loc_D, &&loc_C,
+                    &&loc_E, &&loc_D, &&loc_A
+            };
+
+            unsigned log index = x + 2;
+            long val;
+
+            if (index > 6)
+                    goto loc_def;
+            /* Multiway branch */
+
+  loc_A:    /* Case -2 */
+  loc_B:    /* Case -1, 6 */
+  loc_C:    /* Case 0 */
+  loc_D:    /* Case 1, 3 */
+  loc_E:    /* Case 4 */
+  loc_def:  /* Default case  */
+  done:     
+            *dest = val;
+#+end_src
+A. What were the values of the case labels in the switch statement?
+
+B. What cases had multiple labels in the C code?
+[.L2, .L5, .L7]
+
+#+begin_src C
+  loc_A: /* Case 1, 8 */
+  loc_C: /* Case 3, 5 */
+  loc_D: /* Case 4, 7 */
+#+end_src
+
+
+** Practice Problem 3.31
+
+For a C function switcher with the general structure
+
+#+begin_src C 
+  void switcher(long a, long b, long c, long* dest)
+        {
+                long val;
+                switch(a) {
+                        case ___ :   /* Case A */
+                                c = ___ ;
+                                /* Fall through */
+                        case ___ :   /* Case B */
+                                val = ___ ;
+                                break;
+                        case ___:    /* Case C */
+                        case ___:    /* Case D */
+                                val = ___;
+                                break;
+                        case ___:    /* Case E */
+                                val = ___;
+                                break;
+                        default:
+                                val = ___;
+                 }
+                *dest = val;
+         }
+#+end_src
+
+
+#+begin_src asm
+    # void switcher(long a, long b, long c, long* dest)
+    # a in %rsi, b in %rdi, c in %rdx, d in %rcx
+  switcher:
+          cmpq  $7, %rdi            # Compare b:7
+          ja    .L2                 # if >, goto loc_def
+          jmp   *.L4(,%rdi,8)       # Goto *jq[b]
+          .section       .rodata
+  .L7:                              # loc_C:
+          xorq  $15, %rsi           #    
+          movq  %rsi, %rdx          #   c = b ^ 15;
+  .L3:                              # loc_A:
+          leaq  112(%rdx),%rdi      #   b = c + 112;
+          .L6                       #   break;
+  .L5:                              # loc_B:
+          leaq  (%rdx,%rsi), %rdi   #   b = c*a
+          salq  $2, %rdi            #   val = b << 2
+          jmp   .L6                 #   break;
+  .L2:                              # loc_def:
+          movq  %rsi, %rdi          #   val = a
+  .L6:                              # done: 
+          movq  %rdi, %(rcx)        #   *dest = b
+          ret
+#+end_src
+
+Jump table
+
+#+begin_src asm
+  .L4:
+          .quad    .L3  /* loc_A*/ 
+          .quad    .L2  /* loc_def */
+          .quad    .L5  /* loc_B */
+          .quad    .L2  /* loc_def */
+          .quad    .L6  /* done */
+          .quad    .L7  /* loc_C */
+          .quad    .L2  /* loc_def */
+          .quad    .L5  /* loc_B */
+#+end_src
+
+#+begin_src C
+  /* Table of code pointers */
+            static void* jt[9] = {
+                    &&loc_def, &&loc_A, &&loc_B,
+                    &&loc_C, &&loc_D, &&loc_C,
+                    &&loc_E, &&loc_D, &&loc_A
+            };
+#+end_src

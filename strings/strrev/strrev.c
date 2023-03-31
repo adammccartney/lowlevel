@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
 		int len = 0;
 		len = strlen(argv[1]);
 		strrev(argv[1], len);
-		printf("%s", argv[1]);
+		printf("%s\n", argv[1]);
 	}
 	return 0;
 }

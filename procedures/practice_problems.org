@@ -1,0 +1,181 @@
+* Procedures
+
+** Practice Problem 3.32
+
+The disassembled code for two functions first and last is shown below, along
+with the code for a call of first by function main:
+
+#+begin_src shell
+  # Disassembly of last(long u, long v)
+  # u in %rdi, v in %rsi
+  1
+  2 400540: 48 89 f8       mov         %rdi,%rax      L1: u
+  3 400543: 48 0f af c6    imul        %rsi,%rax      L2: u*v
+  4 400547: c3             retq                       L3: Return
+
+
+  Disassembly of last(long x)
+  # x in %rdi
+  5  0000000000400548 <first>:
+  6  400548: 48 8d 77 01           lea   0x1(%rdi),%rsi      F1: x+1
+  7  40054c: 48 83 ef 01           sub   $0x1,%rdi           F2: x-1       
+  8  400550: e8 eb ff ff ff        callq 400540 <last>       F3: Call last(x-1,x+1)
+  9  400555: f3 c3                 repz  retqF1: x+1         F4: Return
+       .
+       .
+  10 400560: e8 e3 ff ff ff        callq  400548 <first>     M1: Call first(10)
+  11 400565: 48 89 c2              mov    %rax,%rdx          M2: Resume
+#+end_src
+
+Each of these instructions is given a label, similar to those in Figure 3.27(a).
+Starting with the falling of src_C{first(10)} by src_C{main}, fill in the following
+table to trace instruction execution through to the point where the program
+returns back to src_C{main}.
+
+
+
++--------------------------------+----------------------------------------------------------------------+
+| Instruction                    |  State Values (at beginning)                                         |
++--------------------------------+----------------------------------------------------------------------+
+| Label |       PC | Instruction | %rdi | %rsi | %rax |            %rsp |  *%rsp | Description          |
+|-------+----------+-------------+------+------+------+-----------------+--------+----------------------|
+| M1    | 0x400560 | callq       | 10   | --   | --   | 0x7ffffffffe820 |     -- | Call first(10)       |
+| F1    | 0x400548 | lea         | 10   | --   | --   | 0x7ffffffffe818 | 400565 | Entry of first       |
+| F2    | 0x40054c | sub         | 10   | 11   | --   | 0x7ffffffffe818 | 400565 |                      |
+| F3    | 0x400550 | callq       | 9    | 11   | --   | 0x7ffffffffe818 | 400565 | Call last(9,11)      |
+| L1    | 0x400540 | mov         | 9    | 11   | --   | 0x7ffffffffe810 | 400555 | Entry of last        |
+| L2    | 0x400543 | imul        | 9    | 11   | 9    | 0x7ffffffffe810 | 400555 |                      |
+| L3    | 0x400547 | retq        | 9    | 11   | 99   | 0x7ffffffffe810 | 400555 | Return 99 from last  |
+| F4    | 0x400555 | repz retq   | 9    | 11   | 99   | 0x7ffffffffe820 | 400565 | Return 99 from first |
+| M2    | 0x400565 | mov         | 9    | 11   | 99   | 0x7ffffffffe820 | --     | Resume main          |
+
+
+
+** Practice Problem 3.33
+
+A C function procprob has four argument u, a, v and b. Each is either a signed number or a pointer
+to a signed number, where the numbers have different sized. The function has the following body.
+
+
+#+begin_src C
+  ,*u += a;
+  ,*v += b;
+  return sizeof(a) + sizeof(b)
+#+end_src
+
+#+begin_src asm
+  procprob:
+          movslq  %edi, %rdi
+          addq    %rdi, (%rdx)
+          addb    %sil, (%rcx)
+          movl    $6,   %eax        # we know the 6 is for 6 bytes
+          ret
+#+end_src
+
+Determin a valid ordering and types of the four parameters. There are two correct answers.
+
+
+1. either u and a are 64bit types, v and b are 8 bit types
+2. v and b are 64 bit types, u and a are 8 bit
+
+#+begin_src C
+  int procprob(int a, int* u,
+               uint16_t b, uint16_t* v)
+        {
+                ,*u += a;
+                ,*v += b;
+                return sizeof(a) + sizeof(b);  # this must equal 6 bytes
+        }
+#+end_src
+
+#+begin_src asm
+  # int procprob(int a, int* u,
+  #              uint8_t b, uint8_t* v)
+  # a in %rdi  (64 bits)
+  # u in       (32 bits)
+  # b in %sil  (8 bits)
+  # v in       (16 bits)
+#+end_src
+
+** Practice Problem 3.34
+
+Consider a function P, which generates local values, named a0-a8. It then calls
+function Q using these generated values as arguments. Gcc produces the following
+code for the first part of P:
+
+#+begin_src asm
+  # long P(long x)
+  # x in %rdi
+          P:
+          pushq  %r15           # callee saved (save %r15)
+          pushq  %r14           # callee saved
+          pushq  %r13           # callee saved
+          pushq  %r12           # callee saved
+          pushq  %rbp           # callee saved
+          pushq  %rbx           # caller saved
+          subq   $24, %rsp      # set up stack frame
+          movq   %rdi, %rbx     # move x into caller reg
+          leaq   1(%rdi), %r15  
+          leaq   2(%rdi), %r14  
+          leaq   3(%rdi), %r13  
+          leaq   4(%rdi), %r12  
+          leaq   5(%rdi), %rbp  
+          leaq   6(%rdi), %rax  # val = x+6
+          movq   %rax, (%rsp)   # push_stack(val)
+          leaq   7(%rdi), %rdx  # 
+          movq   $0, %eax
+          call   Q
+            . . .
+#+end_src
+
+A. Identify which local values get stored in callee-saved registers
+B. Identify which local values get stored on the stack.
+C. Explain why the program could not store all of the local values in callee-saved registers.
+
+** Practice Problem 3.35
+
+For a C function having the general structure
+
+#+begin_src C
+  long rfun(unsigned long x)
+  {
+          if (____)
+                  return ____;
+          unsigned long nx = ____;
+          long rv = rfun(nx);
+          return ____;
+  }
+#+end_src
+
+#+begin_src asm
+  # long rfun(unsigned long x)
+  # x in %rdi
+  rfun:
+          pushq  %rbx          # save %rbx
+          movq   %rdi, %rbx    # Store x in callee-saved register
+          movl   $0, %eax      # Set return value = 0
+          testq  %rdi, %rdi    # if x == 0          # Note: test sets the zero flag [ZF] when the result of AND is zero
+          je     .L2           # goto .L2           # Note: Jump if Equals tests the zero flag and jumps if flag is set
+          shrq   $2, %rdi      # nx = x >> 2
+          call   rfun          # rv = rfun(nx)
+          addq   %rbx, %rax    # val = 
+  .L2:
+          popq   %rbx          # pop_stack
+          ret                  # 
+#+end_src
+
+
+A. What value does rfun store in the callee-saved register %rbx?
+   holds the value of parameter x
+B. Fill in the missing expressions in the C code above.
+
+#+begin_src C
+  long rfun(unsigned long x)
+  {
+          if (x == 0)
+                  return 0;
+          unsigned long nx = x >> 2;
+          long rv = rfun(nx);
+          return x + rv;
+  }
+#+end_src
