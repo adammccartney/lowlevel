@@ -1,0 +1,288 @@
+* Arrays
+
+** Practice Problem 3.36
+
+Consider the following declaration
+
+#+begin_src C
+  int     P[5];
+  short   Q[2];
+  int     **R[9];
+  double  *S[10];
+  short   *T[2];
+#+end_src
+
+Fill in the following table describing the element size, the total size,
+and the address of element i for each of these arrays
+
+| Array | Element size | Total size | Start address | Element i |
+|-------+--------------+------------+---------------+-----------|
+| P     |            4 |         20 | x_a           | x_a + 4i  |
+| Q     |            2 |          4 | x_b           | x_b + 2i  |
+| R     |            8 |         72 | x_r           | x_r + 8i  |
+| D     |            8 |         80 | x_s           | x_s + 8i  |
+| T     |            8 |         16 | x_t           | x_t + 8i  |
+
+Note: a pointer of any kind is 8 bytes long.
+
+* Pointer Arithmetic
+
+| Expression | Type | Value        | Assembly code              |
+|------------+------+--------------+----------------------------|
+| E          | int* | x_E          | movl %rdx,%rax             |
+| E[0]       | int  | M[x_E]       | movl (%rdx),%eax           |
+| E[i]       | int  | M[x_E + 4i]  | movl (%rdx,%rcx,4),%eax    |
+| &E[2]      | int* | x_E + 8      | leaq 8(%rdx),%rax          |
+| E+i-1      | int* | x_E + 4i - 4 | leaq -4(%rdx,%rcx,4),%rax  |
+| *(E+i-3)   | int  | M[x_E+4i-12] | movl -12(%rdx,%rcx,4),%eax |
+| &E[i]-E    | long | i            | movq %rcx,%rax             |
+
+** Practice Problem 3.37
+Suppose x_P, the address of short integer array P, and long integer
+index i are stored in registers %rdx and %rcx, respectively. For each
+of the following expressions, give its type, a formula for its value, and
+an assembly-code implmentation. The result should be stored in register
+%rax if it is a pointer and register element %ax if it has a data type
+short.
+
+| Expression | Type   | Value         | Assembly code               |
+|------------+--------+---------------+-----------------------------|
+| P[1]       | short  | M[x_P+2]      | movl 2(%rdx),%ax            |
+| P+3+i      | short* | x_P + 2i + 6  | leaq 6(%rdx,%rcx,2),%rax    |
+| P[i*6-5]   | short  | M[x_E+12i-10] | movl -10(%rdx,%rcx,12),%eax |
+| P[2]       | short  | M[x_P + 4]    | movw 4(%rdx),%ax            |
+| &P[i+2]    | short* | x_P + 2i + 4  | leaq 4(%rdx,%rcx,2),%rax    |
+
+* Nested Arrays
+
+#+begin_src 
+T D[R][C];
+#+end_src
+
+array element D[i][j] is at memory address
+
+#+name: equation 3.1
+#+begin_src
+  &D[i][j] = x_D + L(C*i+j)
+#+end_src
+
+
+** Practice Problem 3.38
+
+Consider the following source code, where M and N are constants declared with
+#define:
+
+#+begin_src C
+    long P[M][N];
+    long Q[N][M];
+
+    long sum_element(long i, long j)
+    {
+            return P[i][j] + Q[j][i];
+    }
+#+end_src
+
+In compiling this program, GCC generates the following assembly code:
+
+#+begin_src asm
+  # long sum_element(long i, long j)
+  # i in %rdi, j in %rsi
+  sum_element:
+          leaq  0(,%rdi,8),    %rdx   # Compute 0 + 8i
+          subq  %rdi, %rdx            # Compute 7i
+          addq  %rsi, %rdx            # Compute j + 7i 
+          leaq  (%rsi,%rsi,4), %rax   # Compute 5j
+          addq  %rax, %rdi            # Compute 5j + i
+          movq  Q(,%rdi,8), %rax      # Read from M[x_Q + 8(5j + i)]
+          addq  P(,%rdx,8), %rax      # Add M[x_p + 8(j + 7i)]
+          ret
+#+end_src
+
+M = 5
+N = 7
+Use your reverse engineering skills to determine the values of M and N
+based on the assembly code.
+
+
+* Fixed-Size Arrays
+
+
+#+name: fix_matrix
+#+begin_src C :noweb yes
+  #define N 16
+  typedef int fix_matrix[N][N];
+#+end_src
+
+
+(a) Original C code
+#+name: figure 3.37(a)
+#+begin_src C :noweb yes
+  <<fix_matrix>>
+
+    /* Compute i,k of fixed matrix product */
+  int fix_prod_ele (fix_matrix A, fix_matrix B, long i, long k)
+  {
+          long j;
+          int result = 0;
+
+          for (j = 0; j < N; j++)
+                  result += A[i][j] * B[j][k];
+
+          return result;
+   }
+#+end_src
+
+(b) Optimized C code
+#+name: figure 3.37(b)
+#+begin_src C :noweb yes
+  <<fix_matrix>>
+  /* Compute i, k of fixed matrix product */
+  int fix_prod_ele_opt(fix_matrix A, fix_matrix B, long i, long k)
+  {
+          int *Aptr = &A[i][0];  /* Points to elements in row i of A */
+          int *Bptr = &B[0][k];  /* Points to elements in column k of B */
+          int *Bend = &B[N][k];  /* Marks stopping point for Bptr */
+          int result = 0;
+          do {                                /* No need for initial test */
+                  result += *Aptr * *Bptr;    /* Add next product to sum  */
+                  Aptr ++;                    /* Move Aptr to next column */
+                  Bptr += N;                  /* Move Bptr to next row    */
+          } while (Bptr != Bend);             /* Test for stopping point  */
+          return result;
+  }
+#+end_src
+
+#+begin_src asm
+  # int fix_prod_ele_opt(fix_matrix A, fix_matrix B, long i, long k)
+  # A in %rdi, B in %rsi, k in %rcx
+  fix_prod_ele:
+          salq  $6, %rdx            # Compute 64 * i
+          addq  %rdx, %rdi          # Compute Aptr = x_A + 64i = &A[i][0]
+          leaq  (%rsi,%rcx,4),%rcx  # Compute Bptr = x_B + 4k = &B[0][k]
+          leaq  1024(%rcx),%rsi     # Compute Bend = x_B + 4k + 1024 = &B[N][k]
+          movl  $0,%eax             # Set result = 0
+  .L7:                           #loop:
+          movl  ($rdi), %edx        # Read *Aptr
+          imull (%rcx), %edx        # Multiply by *Bptr
+          addl  %edx, %eax          # Add to result
+          addq  $4, %rdi            # Increment Aptr ++
+          addq  $64, %rcx           # Increment Bptr += N
+          cpmq  %rsi, %rcx          # Compare Bptr:Bend
+          jne   .L7                 # If !=, goto loop
+          rep; ret                  # Return
+#+end_src
+
+
+The product of arrays 
+
+$\Sigma_{0 \leq j < N} a_{i,j} \cdot b_{j,k}$
+
+
+
+** Practice Problem 3.39
+
+Use equation 3.1 to explain how the computations of the initial values for
+Aptr, Bptr, and Bend in the C code of Figure 3.37(b) (lines 3-5) correctly
+describe the computations in assembly code generated for fix_prod_ele (lines 3-5)
+
+Again, the equation:
+
+#+begin_src
+    T D[R][C];
+#+end_src
+
+arrays element src_C{D[i][j]} is at memory address
+
+#+begin_src
+  &D[i][j] = x_d + L(C * i + j)
+#+end_src
+
+where L is the size of data type T in bytes. C is the width of row.
+
+
+We're looking to explain the lines:
+#+begin_src asm
+  addq  %rdx, %rdi            # Compute Aptr = x_A + 64i = &A[i][0]
+  leaq  (%rsi,%rcx,4), %rcx   # Compute Bptr = x_B + 4k = &B[0][k]
+  leq   1024(%rcx), %rsi      # Compute Bend = x_B + 4k + 1024 = &B[N][k]
+#+end_src
+
+We need the following values for our constants:
+L = 4
+C = 16
+
+To compute Aptr:
+&A[i][0] = x_A + 4(16 * i + 0) = x_A + 64i
+
+To compute Bptr
+&B[0][k] = x_B + 4(16 * 0 + k) = x_B + 4k
+
+To compute Bend
+&B[N][k] = x_B + 4(16 * 16 + k) = x_B + 1024 + 4k
+
+
+** Practice Problem 3.40
+
+The following C code sets the diagonal elements of one of our fixed-size
+arrays to val:
+
+#+begin_src C
+  /* Set all diagonal elements to val */
+  void fix_set_diag(fix_matrix A, int val)
+  {
+          long i;
+          for (i = 0; i < N; i++)
+                  A[i][i] = val;
+  }
+#+end_src
+
+When compiled with optimization level -O1, GCC generates the following
+assembly code:
+
+#+begin_src asm
+  fix_set_diag:
+          # void fix_set_diag(fix_matrix A, int val)
+          # A in %rdi, val in %rsi
+          movl  $0, %eax               # set i = 0
+  .L13:                              # loop:
+          movl  %esi, (%rdi,%rax)      # val = A[i][i]
+          addq  $68, %rax              # i += 68
+          cmpq  $1088,%rax             # while (i != 1088)
+          jne   .L13                   # goto loop
+          rep; ret
+#+end_src
+
+Create a C code program fix_set_diag_opt that uses optimizations similar
+to those shown in the assembly code, in the same style as the code in figure
+3.37(b). Use expressions involving the parameter N rather than integer constants,
+so that your code will work directly if N is redefined
+
+#+begin_src C
+  void fix_set_diag_opt(fix_matrix A, int val)
+  {
+          int *Abase = &A[0][0];
+          long i = 0;
+          long iend = N*(N+1);
+          do {
+                  Abase[i] = val;
+                  i += (N+1);
+          } while (i != iend);
+   }
+
+  }
+#+end_src
+
+
+Increments are going to be
+
+Let's assume N = 3
+
+
+Increments are 
+0,
+4*(3+1),
+4*(6+2)
+
+Note on the "magic numbers" 68 and 1088
+The larger is definitely used in a test to see if we've reached that last column of the
+last row. (/ 1088 64)17  (* 64 16)1024

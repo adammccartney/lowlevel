@@ -1,0 +1,311 @@
+* Structures
+
+** Practice Problem 3.41
+
+Consider the following structure declaration:
+
+#+begin_src C
+  struct test {
+        short *p;
+        struct {
+                short x;
+                short y;
+        } s;
+        struct test *next;
+  }
+#+end_src
+
+This declaration illustrates that structures can be embedded within one
+another, justu as arrays can be embedded within structures and arrays
+can be embedded within arrays.
+
+#+begin_src C
+  void st_init(struct test *st)
+  {
+          st->s.y = ___;
+          st->p   = ___;
+          st->next= ___;
+  }
+#+end_src
+
+A. What are the offsets (in bytes) of the following fields
+
+| field | offset |
+|-------+--------|
+| p     |      0 |
+| s.x   |      8 |
+| s.y   |     10 |
+| next  |     12 |
+
+
+B. How many total bytes does the structure require? 32
+
+C. The compiler generates the following assembly code for st_init:
+
+#+begin_src asm
+  # void st_init (struct test *st)
+  # st in %rdi
+  st_init:
+          movl  8(%rdi), %eax    # Get st->s.x
+          movl  %eax, 10(%rdi)   # Save in st->s.y
+          leaq  10(%rdi), %rax   # Compute &(st->s.y)
+          movq  %rax, (%rdi)     # Store in st->p
+          movq  %rdi, 12(%rdi)   # Store st in st->next
+          ret
+#+end_src
+
+On the basis of this code, fill in the missing expressions for st_init
+
+#+begin_src C
+  void st_init(struct test *st)
+  {
+          st->s.y  = st->s.x;
+          st->p    = &(st->s.y); 
+          st->next = st;
+  }
+#+end_src
+
+** Practice Problem 2.42
+
+The following code shows the destination of a structure of type ACE and
+the prototype for a function test:
+
+#+begin_src C
+  struct ACE {
+          short       v;
+          struct ACE *p;
+  };
+
+  short test(struct ACE *ptr);
+#+end_src
+
+When the code for the fun is compiled, GCC generates the following assembly code:
+
+#+begin_src asm
+  # short test(struct ACE *ptr)
+  # ptr in %rdi
+  test:
+          movl    $1, %eax       # result = 1
+          jmp     .L2            # goto test
+  .L3:                         # loop
+          imulq   (%rdi), %rax   # result *= ptr->v
+          movq    2(%rdi), %rdi  # ptr = ptr->p 
+  .L2:                         # test
+          testq   %rdi, %rdi     # Test ptr
+          jne     .L3            # If != NULL, goto loop
+          rep; ret
+#+end_src
+
+A. Use your reverse engineering skills to write C code for test.
+
+#+begin_src C
+  short test (struct ACE *ptr)
+  {
+          short val = 1;
+          while (ptr)
+          {
+                  val != ptr->v;
+                  ptr = ptr-p;
+          }
+          return val;
+  }
+#+end_src
+
+B. Describe the data structure that this structure implements and the
+   operation performed by test.
+   
+The structure seems like a list of short numbers. Test checks if the next
+short in the list is 0, if not it increments the pointer pointing to the
+head of the list by 2 bytes (so it points to the next short). It computes
+the sum of items in the list.
+
+
+** Practice Problem 3.43
+
+Suppose you are given the job of checking that a C compiler generates the
+proper code for structure and union access. You write the following structure
+declaration:
+
+#+begin_src C
+  typedef union {
+        struct {
+                long   u;
+                short  v;
+                char   w;
+        } t1;
+        struct {
+                int  a[2];
+                char *p;
+        } t2;
+  } u_type;
+#+end_src
+
+You write a series of functions of the form
+
+#+begin_src C
+
+  void get(u_type *up, type *dest)
+  {
+          *dest = expr;
+  }
+#+end_src
+
+With different access expressions expr and with destination data type set
+according to type associated with expr. You then examine the code generated when
+compiling the functions to see if they match your expectations.
+
+Suppose in these functions that up and dest are loaded into registers %rdi and
+%rsi, respectively. Fill in the following table with data type /type/ and
+sequences of one to three instructions to compute the expression and store the
+result at dest.
+
+
+| expr               | type  | Code                     |
+|--------------------+-------+--------------------------|
+| up->t1.u           | long  | movq (%rdi), %rax        |
+|                    |       | movq %rax, (%rsi)        |
+|                    |       |                          |
+| up->t1.v           | short | movq 8(%rdi), %rax       |
+|                    |       | movw %ax, (%rsi)         |
+|                    |       |                          |
+| &up->t1.w          | char* | addq $10, %rdi           |
+|                    |       | movq %rdi, (%rsi)        |
+|                    |       |                          |
+| up->t2.a           | int*  | movq (%rdi), %rsi        |
+|                    |       |                          |
+|                    |       |                          |
+| up->t2.a[up->t1.u] | int   | movl (%rdi), %rax        |
+|                    |       | movl (%rdi,%rax,4), %eax |
+|                    |       | movl %eax,(%rsi)         |
+| *up->t2.p          | char  | movq 8(%rdi), %rax       |
+|                    |       | movb %rax, %al           |
+|                    |       | movb %al, (%rsi)         |
+
+
+** Practice Problem 3.44
+
+For each of the following structure declarations, determine the offset of each field,
+the total size of the structure, and its alignment requirement for x86-64
+
+
+#+name: includes
+#+begin_src scheme :noweb yes
+(use-modules (ice-9 format))
+#+end_src
+
+#+RESULTS: includes
+: #<unspecified>
+
+#+name: showoffsets
+#+begin_src scheme :noweb yes
+  (define showoffsets
+    (lambda (ls)
+      (if (nil ls)
+          '()
+          (display (showoffsets (car ls))))))
+#+end_src
+
+(defun ad/eval-nodes (ls)
+  "Evaluate all the nodes of a list"
+  (if (null ls)
+  
+  
+
+A. src_C{struct P1 { short i; int c; int *j; short *d; };}
+
+#+begin_src 
+  Offset   0    2       6                14                22
+           +----+-------+----------------+----------------+
+  Contents | i  |   c   |      j         |          d     |
+           +----+-------+----------------+----------------+
+  
+#+end_src
+
+B. src_C{struct P2 {int i[2]; char c[8]; short s[4]; long *j;};}
+
+(+ (* 4 2) (* 1 8) (* 2 4) (* 8 1)) 32 bytes required
+Offsets:
+0, 8, 16, 24, 32
+
+C. src_C{struct P3 {long w[2]; int *c[2] };}
+
+(+ (* 8 2) (* 8 2)) 32 bytes required
+Offsets:
+0, 16, 32
+
+
+D. src_C{struct P4 {char w[16]; char* [2] }; }
+
+(+ (* 1 16) (* 8 2)) 32 bytes required
+Offsets:
+0, 16, 32
+
+E. src_C{struct P4 a[2]; struct P1 t};
+
+
+** Practice Problem 3.45
+
+Answer the following for the structure declaration:
+
+#+begin_src C
+  struct {
+        int      *a;
+        float    b;
+        char     c;
+        short    d;
+        long     e;
+        double   f;
+        int      g;
+        char*    h;
+  } rec;
+#+end_src
+
+A. What are the byte offsets of all the fields in the structure
+
+#+begin_src shell
+
+
+Offset   0        8    12 13 16 18       26       32   36       42
+         +--------+----+-+---+--+--------+--------+----+--------+
+Contents | a      | b  |c|   |d |  e     |    f   | g  |  h     |
+         +--------+----+-+---+--+--------+--------+----+--------+
+#+end_src
+
+| Field  | a | b |  c |  d |  e |  f |  g |  h |
+| Size   | 8 | 4 |  1 |  2 |  8 |  8 |  4 |  8 |
+| Offset | 0 | 8 | 12 | 16 | 24 | 32 | 40 | 48 |
+
+
+B. What is the total size of the structure?
+56 bytes
+
+C. Rearrange the fields of the structure to minimize wasted space,
+and then show the byte ofsets and total size for the rearranged structure.
+
+
+#+begin_src C
+  struct {
+        int      *a;
+        long     e;
+        double   f;
+        char*    h;
+        float    b;
+        int      g;
+        short    d;
+        char     c;
+
+  } rec;
+#+end_src
+
+#+begin_src
+  Offset   0        8        16       24       32   36 38 39 40
+           +--------+--------+--------+--------+----+--+-+-+
+ Contents  | a      | e      | f      | h      | g  |d |c|X|
+           +--------+--------+--------+--------+----+--+-+-+
+#+end_src
+
+
+ | Field  | a | h |  f |  e |  b |  g |  d |  c |
+ | Size   | 8 | 8 |  8 |  8 |  4 |  4 |  2 |  1 |
+ | Offset | 0 | 8 | 16 | 24 | 32 | 36 | 40 | 42 |
+ 
