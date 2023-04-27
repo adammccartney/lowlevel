@@ -14,7 +14,7 @@
  *   and written to stderr. We catch some additional errors for you in main.c.
  * - Output to stdout needs to be exactly as specified in the function description.
  * - Only edit this file (beargit.c)
- * - You are given the following helper functions:
+ * - Here are some of the helper functions from util.h:
  *   * fs_mkdir(dirname): create directory <dirname>
  *   * fs_rm(filename): delete file <filename>
  *   * fs_mv(src,dst): move file <src> to <dst>, overwriting <dst> if it exists
@@ -24,10 +24,30 @@
  *     NULL character) from file <filename> and store it into <str>. Note that <str>
  *     needs to be large enough to hold that string.
  *  - You NEED to test your code. The autograder we provide does not contain the
- *    full set of tests that we will run on your code. See "Step 5" in the homework spec.
+ *    full set of tests that we will run on your code. See "Step 5" in the project spec.
  */
 
-#define INDEX_BUFFER_MAX (FILENAME_SIZE * 100);  // Maximum number of filenames in buf
+#define INDEX_STATE_INIT(r) { \
+	.repo = (r), \
+}
+
+struct repository {
+
+	/*
+	 * Path to the current worktree's index file.
+	 * Cannot be NULL after initialization.
+	 */
+	char *index_file;
+
+	/*
+	 * Repository's in-memory index.
+	 * 'repo_read_index()' can be used to populate 'index'.
+	 */
+	struct index_state *index;
+};
+
+struct index_state {
+};
 
 /* beargit init
  *
@@ -44,19 +64,25 @@ int beargit_init(void) {
 
   FILE* findex = fopen(".beargit/.index", "w");
   fclose(findex);
-  
+
+  FILE* fbranches = fopen(".beargit/.branches", "w");
+  fprintf(fbranches, "%s\n", "master");
+  fclose(fbranches);
+
   write_string_to_file(".beargit/.prev", "0000000000000000000000000000000000000000");
+  write_string_to_file(".beargit/.current_branch", "master");
 
   return 0;
 }
 
 
+
 /* beargit add <filename>
- * 
+ *
  * - Append filename to list in .beargit/.index if it isn't in there yet
  *
  * Possible errors (to stderr):
- * >> ERROR: File <filename> already added
+ * >> ERROR:  File <filename> has already been added.
  *
  * Output (to stdout):
  * - None if successful
@@ -70,7 +96,7 @@ int beargit_add(const char* filename) {
   while(fgets(line, sizeof(line), findex)) {
     strtok(line, "\n");
     if (strcmp(line, filename) == 0) {
-      fprintf(stderr, "ERROR: File %s already added\n", filename);
+      fprintf(stderr, "ERROR:  File %s has already been added.\n", filename);
       fclose(findex);
       fclose(fnewindex);
       fs_rm(".beargit/.newindex");
@@ -89,41 +115,105 @@ int beargit_add(const char* filename) {
   return 0;
 }
 
-
-/* beargit rm <filename>
- * 
- * See "Step 2" in the homework 1 spec.
+/* beargit status
+ *
+ * See "Step 1" in the project spec.
  *
  */
 
-int beargit_rm(const char* filename) {
-  /* COMPLETE THE REST */
+int beargit_status() {
+  size_t len;
   FILE* findex = fopen(".beargit/.index", "r");
-  FILE *fnewindex = fopen(".beargit/.newindex", "w");
+  if (findex == NULL) {
+	  fprintf(stderr, "fopen error\n");
+	  exit(1);
+  }
+
+  fprintf(stdout, "Tracked files:\n\n");
+  int fcount = 0;
+  ssize_t read = 0;
+  char* line = NULL;
+  while ((read = getline(&line, &len, findex)) != -1) {
+	printf("%s", line);
+        fcount++;
+  }
+  // print total number of files in index
+  printf("\n%d files total\n", fcount);
+  fclose(findex);
+  free(line);
 
   return 0;
 }
 
+/* beargit rm <filename>
+ *
+ * - Remove filename from list in .beargit/.index if it is found.
+ * 
+ * Possible errors (to stderr):
+ * beargit rm FILE_THAT_IS_NOT_TRACKED.txt
+ * ERROR:  File <filename> not tracked.
+ *
+ * Output (to stdout):
+ * - None if successful
+ */
+
+int beargit_rm(const char* filename) {
+	FILE* findex = fopen(".beargit/.index", "r");
+	FILE* fnewindex = fopen(".beargit/.newindex", "w");
+	int fnames = 0;
+	int lines = 0;
+
+	char line[FILENAME_SIZE];
+	while (fgets(line, sizeof(line), findex)) {
+		strtok(line, "\n");
+		lines++;
+		if (strcmp(line, filename) != 0) {
+			fprintf(fnewindex, "%s\n", line);
+			fnames++;
+		}
+	}
+	if (fnames == lines) {
+		fprintf(stderr, "ERROR: File %s not tracked.\n", filename);
+		fclose(findex);
+		fclose(fnewindex);
+		fs_rm(".beargit/.newindex");
+		return 3;
+	}
+
+	fclose(findex);
+	fclose(fnewindex);
+	fs_mv(".beargit/.newindex", ".beargit/.index");
+
+	return 0;
+}
+
 /* beargit commit -m <msg>
  *
- * See "Step 3" in the homework 1 spec.
+ * See "Step 3" in the project spec.
  *
  */
 
-const char* go_bears = "GO BEARS!";
+const char* go_bears = "THIS IS BEAR TERRITORY!";
 
 int is_commit_msg_ok(const char* msg) {
   /* COMPLETE THE REST */
   return 0;
 }
 
+/* Use next_commit_id to fill in the rest of the commit ID.
+ *
+ * Hints:
+ * You will need a destination string buffer to hold your next_commit_id, before you copy it back to commit_id
+ * You will need to use a function we have provided for you.
+ */
+
 void next_commit_id(char* commit_id) {
-  /* COMPLETE THE REST */
+     /* COMPLETE THE REST */
 }
 
 int beargit_commit(const char* msg) {
   if (!is_commit_msg_ok(msg)) {
-    fprintf(stderr, "ERROR: Message must contain \"%s\"\n", go_bears);
+    fprintf(stderr, "ERROR:  Message must contain \"%s\"\n", go_bears);
     return 1;
   }
 
@@ -136,46 +226,177 @@ int beargit_commit(const char* msg) {
   return 0;
 }
 
-/* beargit status
+/* beargit log
  *
- * See "Step 1" in the homework 1 spec.
- * Functionality:
- * The status command in beargit should read the file `.beargit/.index` and
- * print a line for each tracked file. The exact format is described in the hw 1 spec.
- * Unlike git status, beargit status should not print anything about untracked
- * files.
+ * See "Step 4" in the project spec.
  *
  */
 
-int beargit_status() {
+int beargit_log(int limit) {
   /* COMPLETE THE REST */
-
-  /* open file .beargit/.index */
-  char* findex_name = ".bearfit/.index";
-  FILE* findex = fopen(findex_name, "r");
-
-  fprintf(stdout, "Tracked files:\n\n");
-  int fcount = 0;
-  char one_line[FILENAME_MAX];
-  // tokenize the open file into lines
-  while (fgets(one_line, sizeof(one_line), findex) != NULL) {
-          fprintf(stdout, "\t\t%s", one_line);
-          fcount++;
-  }
-  // print total number of files in index
-  fprintf(stdout, "\n%d files total\n", fcount);
-  fclose(findex);
   return 0;
 }
 
-/* beargit log
+
+// This helper function returns the branch number for a specific branch, or
+// returns -1 if the branch does not exist.
+int get_branch_number(const char* branch_name) {
+  FILE* fbranches = fopen(".beargit/.branches", "r");
+
+  int branch_index = -1;
+  int counter = 0;
+  char line[FILENAME_SIZE];
+  while(fgets(line, sizeof(line), fbranches)) {
+    strtok(line, "\n");
+    if (strcmp(line, branch_name) == 0) {
+      branch_index = counter;
+    }
+    counter++;
+  }
+
+  fclose(fbranches);
+
+  return branch_index;
+}
+
+/* beargit branch
  *
- * See "Step 4" in the homework 1 spec.
+ * See "Step 5" in the project spec.
  *
  */
 
-int beargit_log() {
+int beargit_branch() {
   /* COMPLETE THE REST */
+
+  return 0;
+}
+
+/* beargit checkout
+ *
+ * See "Step 6" in the project spec.
+ *
+ */
+
+int checkout_commit(const char* commit_id) {
+  /* COMPLETE THE REST */
+  return 0;
+}
+
+int is_it_a_commit_id(const char* commit_id) {
+  /* COMPLETE THE REST */
+  return 1;
+}
+
+int beargit_checkout(const char* arg, int new_branch) {
+  // Get the current branch
+  char current_branch[BRANCHNAME_SIZE];
+  read_string_from_file(".beargit/.current_branch", "current_branch", BRANCHNAME_SIZE);
+
+  // If not detached, leave the current branch by storing the current HEAD into that branch's file...
+  if (strlen(current_branch)) {
+    char current_branch_file[BRANCHNAME_SIZE+50];
+    sprintf(current_branch_file, ".beargit/.branch_%s", current_branch);
+    fs_cp(".beargit/.prev", current_branch_file);
+  }
+
+   // Check whether the argument is a commit ID. If yes, we just change to detached mode
+  // without actually having to change into any other branch.
+  if (is_it_a_commit_id(arg)) {
+    char commit_dir[FILENAME_SIZE] = ".beargit/";
+    strcat(commit_dir, arg);
+    // ...and setting the current branch to none (i.e., detached).
+    write_string_to_file(".beargit/.current_branch", "");
+
+    return checkout_commit(arg);
+  }
+
+
+
+  // Read branches file (giving us the HEAD commit id for that branch).
+  int branch_exists = (get_branch_number(arg) >= 0);
+
+  // Check for errors.
+  if (!(!branch_exists || !new_branch)) {
+    fprintf(stderr, "ERROR:  A branch named %s already exists.\n", arg);
+    return 1;
+  } else if (!branch_exists && new_branch) {
+    fprintf(stderr, "ERROR:  No branch or commit %s exists.\n", arg);
+    return 1;
+  }
+
+  // Just a better name, since we now know the argument is a branch name.
+  const char* branch_name = arg;
+
+  // File for the branch we are changing into.
+  char* branch_file = ".beargit/.branch_";
+  strcat(branch_file, branch_name);
+
+  // Update the branch file if new branch is created (now it can't go wrong anymore)
+  if (new_branch) {
+    FILE* fbranches = fopen(".beargit/.branches", "a");
+    fprintf(fbranches, "%s\n", branch_name);
+    fclose(fbranches);
+    fs_cp(".beargit/.prev", branch_file);
+  }
+
+  write_string_to_file(".beargit/.current_branch", branch_name);
+
+  // Read the head commit ID of this branch.
+  char branch_head_commit_id[COMMIT_ID_SIZE];
+  read_string_from_file(branch_file, branch_head_commit_id, COMMIT_ID_SIZE);
+
+  // Check out the actual commit.
+  return checkout_commit(branch_head_commit_id);
+}
+
+/* beargit reset
+ *
+ * See "Step 7" in the project spec.
+ *
+ */
+
+int beargit_reset(const char* commit_id, const char* filename) {
+  if (!is_it_a_commit_id(commit_id)) {
+      fprintf(stderr, "ERROR:  Commit %s does not exist.\n", commit_id);
+      return 1;
+  }
+
+  // Check if the file is in the commit directory
+  /* COMPLETE THIS PART */
+
+  // Copy the file to the current working directory
+  /* COMPLETE THIS PART */
+
+  // Add the file if it wasn't already there
+  /* COMPLETE THIS PART */
+
+  return 0;
+}
+
+/* beargit merge
+ *
+ * See "Step 8" in the project spec.
+ *
+ */
+
+int beargit_merge(const char* arg) {
+  // Get the commit_id or throw an error
+  char commit_id[COMMIT_ID_SIZE];
+  if (!is_it_a_commit_id(arg)) {
+      if (get_branch_number(arg) == -1) {
+            fprintf(stderr, "ERROR:  No branch or commit %s exists.\n", arg);
+            return 1;
+      }
+      char branch_file[FILENAME_SIZE];
+      snprintf(branch_file, FILENAME_SIZE, ".beargit/.branch_%s", arg);
+      read_string_from_file(branch_file, commit_id, COMMIT_ID_SIZE);
+  } else {
+      snprintf(commit_id, COMMIT_ID_SIZE, "%s", arg);
+  }
+
+  // Iterate through each line of the commit_id index and determine how you
+  // should copy the index file over
+   /* COMPLETE THE REST */
 
   return 0;
 }

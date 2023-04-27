@@ -1,14 +1,16 @@
-beargit: main.c beargit.c beargit.h util.h
-	gcc -std=c99 -g main.c beargit.c -o beargit
+# CUNIT=-L/home/ff/cs61c/cunit/install/lib -I/home/ff/cs61c/cunit/install/include -lcunit
+CUNIT=-lcunit
+
+
+
+beargit: main.c beargit.c util.c beargit.h util.h
+	gcc -g -std=c99 -Wno-deprecated-declarations main.c beargit.c util.c -lcrypto -lssl -o beargit
+
+beargit-unittest: main.c beargit.c cunittests.c util.c beargit.h util.h cunittests.h
+	gcc -g -Wno-deprecated-declarations -DTESTING -std=c99 main.c beargit.c cunittests.c util.c -lcrypto -lssl -o beargit-unittest $(CUNIT) -Wno-error=deprecated-declarations
 
 clean:
-	rm -rf beargit autotest test
+	rm -rf beargit autotest test beargit-unittest
 
-mocks:
-	python3 -c "from mocks import create_files; create_files()"
-
-check::
-ifndef INSTMANPATH
-	$(error You need to run 'make check' on an instructional machine, such as hive*.cs.berkeley.edu)
-endif
+check: beargit
 	python2.7 tester.pyc beargit.c
