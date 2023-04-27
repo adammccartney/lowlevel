@@ -1,0 +1,119 @@
+* Combining control and data
+
+** Practice Problem 3.46
+The file get_line.c shows a (low-quality) implementation of a function that
+reads a line from stdin, copies the string to newly allocated storage, and
+returns a pointer to the result.
+Consider the following scenario. Procedure get_line is called with the return
+address equal  to 0x400776 and register %rbx equal to 0x0123456789ABCDEF.
+You type in the string:
+
+0123456789012345678901234
+
+The program terminates with a segmentation fault. You run GDB and determine
+that the error occurs during the execution of the ret instruction of get_line.
+
+#+begin_src asm
+162 00000000004011bd <get_line>:
+163   4011bd:   55                      push   %rbp
+164   4011be:   48 89 e5                mov    %rsp,%rbp
+165   4011c1:   48 83 ec 10             sub    $0x10,%rsp
+166   4011c5:   48 8d 45 f4             lea    -0xc(%rbp),%rax
+167   4011c9:   48 89 c7                mov    %rax,%rdi
+168   4011cc:   e8 85 ff ff ff          call   401156 <gets>
+#+end_src
+
+A. Fill in the diagram that follows, indicating as much as you can about the
+   stack just after executing the instruction at line 165 in the disassembly.
+   Label the quantities stored on the stack (e.g. "Return address") on the right,
+   and their hexadecimal values (if known) within the box. Each box represents
+   8 bytes. Indicate the position of %rsp. Recall that the ASCII codes for characters
+   0-9 are 0x30-0x39.
+
+   %rsp before call to gets: 0x7fffffffd7e0
+   %rsp after call to gets:  0x7fffffffd7b0
+
+   The difference between these two addresses is:
+   (- #xe0 #xb0) .. 48
+
+
+#+name: stack after line 165 ... before call to gets
+#+begin_src
+  | 00 00 00 00 00 40 11 c5 | Return Address  (returns back to main)
+  | 01 23 45 67 89 AB CD EF | Saved %rbx
+  |                         | 
+  |                         | <- buf %rsp
+  |                         |
+#+end_src
+
+B. Modify your diagram to show the effect of the call togets (line 168).
+
+
+#+name: stack after call to gets
+#+begin_src
+  | 00 00 00 00 00 40 11 34 | Return Address  (returns back to get_line)
+  | 33 32 31 30 39 38 37 36 | Saved %rbx
+  | 35 34 33 32 31 30 39 38 | 
+  | 37 36 35 34 33 32 31 30 | <- buf %rsp
+  |                         |
+#+end_src
+
+C. To what address does the program attempt to return?
+
+It attempts to return to 0x401134, this is because the terminating xd1 was overwritten
+by 0x34. gets knows nothing about the expected length of the string, so it just continues
+to chomp away at the input until it encounters the null byte. Unfortunately the string
+is longer than the memory allocated for buf
+
+D. What register(s) have corrupted value(s) when get_line returns?
+
+E. Besides the potential for buffer overflow, what two other things
+   are wrong with the code for get_line?
+The call to malloc should allocated extra memory for the terminating null byte.
+It should also check that the call did not return NULL.
+
+* Stack Randomization
+
+The following shows how Linux uses /address-space layout randomization/ or ASLR
+to randomize the layout of the program on the stack. This creates a barrier for
+any attacker who wants to determine the return address used by the program, whe
+
+#+name: stack checking code
+#+begin_src C
+  int main()
+  {
+          long local;
+          printf("local at %p\n", &local);
+          return 0;
+  }
+#+end_src
+
+** Practice Problem 3.47
+
+Running our stack-checking code 10,000 times on a system running Linux
+version 2.6.16, we obtained addresses ranging from a minimum of
+0xffffb7454 to a maximum of 0xffffd754
+
+A. What is the approximate range of addresses?
+
+(* (- 14 11) (expt 16 3)) 12288
+
+   (expt 16 3)4096
+   (expt 16 4)65536
+
+   range is about 2^16
+   
+B. If we attempted a buffer overrun with a 128-byte nop sled, how many
+   attemps would it take to test all starting addresses?
+
+   (expt 2 7)128
+   
+   (/ (expt 16 4) (expt 2 7))512
+
+   Would only require 512 attemps
+
+   if the range were (expt 2 13)8192
+
+   (/ (expt 2 13) (expt 2 7))64
+
+   Would only require 64 attemps!
