@@ -3,6 +3,8 @@
 
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <sha1.h>
 
 #include "beargit.h"
 #include "util.h"
@@ -26,19 +28,33 @@
  *  - You NEED to test your code. The autograder we provide does not contain the
  *    full set of tests that we will run on your code. See "Step 5" in the project spec.
  */
+// Commit msg will always be 'THIS IS BEAR TERRITORY!'
+#define MSG_LENGTH (23)
+#define BASEDIR_LEN (8)
+#define ORIG_OFFSET (40)
+#define MAXLINE (2048)
 
 #define INDEX_STATE_INIT(r) { \
 	.repo = (r), \
 }
 
 struct repository {
-
+	/* Environment */
+	/*
+	 * Path to the git directory.
+	 * Cannot be NULL after initialization.
+	 */
+	char *gitdir;
 	/*
 	 * Path to the current worktree's index file.
 	 * Cannot be NULL after initialization.
 	 */
 	char *index_file;
-
+	/*
+	 * Path to the working directory.
+	 * A NULL value indicates that there is no working directory.
+	 */
+	char *worktree;
 	/*
 	 * Repository's in-memory index.
 	 * 'repo_read_index()' can be used to populate 'index'.
@@ -115,6 +131,26 @@ int beargit_add(const char* filename) {
   return 0;
 }
 
+int count_filenames_in_index()
+{
+	size_t len;
+	FILE* findex = fopen(".beargit/.index", "r");
+	if (findex == NULL) {
+		fprintf(stderr, "fopen error\n");
+		exit(1);
+	}
+
+	int fcount = 0;
+	ssize_t read = 0;
+	char* line = NULL;
+	while ((read = getline(&line, &len, findex)) != -1) {
+		fcount++;
+	}
+	free(line);
+	fclose(findex);
+	return fcount;
+}
+
 /* beargit status
  *
  * See "Step 1" in the project spec.
@@ -133,6 +169,7 @@ int beargit_status() {
   int fcount = 0;
   ssize_t read = 0;
   char* line = NULL;
+  fcount = count_filenames_in_index();
   while ((read = getline(&line, &len, findex)) != -1) {
 	printf("%s", line);
         fcount++;
@@ -196,8 +233,10 @@ int beargit_rm(const char* filename) {
 const char* go_bears = "THIS IS BEAR TERRITORY!";
 
 int is_commit_msg_ok(const char* msg) {
-  /* COMPLETE THE REST */
-  return 0;
+	const int msg_len = 24;
+	if (memcmp(go_bears, msg, msg_len) != 0)
+		return 0;
+	return 1;
 }
 
 /* Use next_commit_id to fill in the rest of the commit ID.
@@ -208,22 +247,81 @@ int is_commit_msg_ok(const char* msg) {
  */
 
 void next_commit_id(char* commit_id) {
-     /* COMPLETE THE REST */
+     char buffer[ORIG_OFFSET + MSG_LENGTH];
+     unsigned int size;
+     /* Take the commit_id and prepend it to the front of the buffer */
+     memcpy(&buffer, commit_id, ORIG_OFFSET);
+     /* Copy commit msg to the remaining space in buffer */
+     memcpy(&buffer[ORIG_OFFSET], go_bears, MSG_LENGTH);
+     /* Hash the commit */
+     cryptohash((const char *)&buffer, commit_id);
 }
 
-int beargit_commit(const char* msg) {
-  if (!is_commit_msg_ok(msg)) {
-    fprintf(stderr, "ERROR:  Message must contain \"%s\"\n", go_bears);
-    return 1;
-  }
+void new_filename(char** bufp, const char* node, const char* leaf)
+{
+	size_t size = strlen(leaf) + 1;
+	char* buf; 
+	buf = malloc(BASEDIR_LEN + ORIG_OFFSET + size);
+	sprintf(buf, "%s/%s", node, leaf);
+	*bufp = buf;
+}
 
-  char commit_id[COMMIT_ID_SIZE];
-  read_string_from_file(".beargit/.prev", commit_id, COMMIT_ID_SIZE);
-  next_commit_id(commit_id);
+int beargit_commit(const char* msg) 
+{
+	if (!is_commit_msg_ok(msg)) {
+		fprintf(stderr, "ERROR:  Message must contain \"%s\"\n", go_bears);
+		return 1;
+	}
 
-  /* COMPLETE THE REST */
+	char commit_id[COMMIT_ID_SIZE];
+	read_string_from_file(".beargit/.prev", commit_id, COMMIT_ID_SIZE);
+	next_commit_id(commit_id);
 
-  return 0;
+	/* COMPLETE THE REST */
+	/* Create directory .beargit/<commit_id> */
+	char new_node[BASEDIR_LEN + COMMIT_ID_SIZE];
+	sprintf(new_node, ".beargit/%s", commit_id);
+	fs_mkdir(new_node); 
+	/* Copy .beargit/.prev -> .beargit/<commit_id>/.prev */
+	char* new_prev;
+	new_filename(&new_prev, new_node, ".prev");
+	fs_cp(".beargit/.prev", new_prev); 
+	/* Copy .beargit/.index -> .beargit/<commit_id>/.index */
+	char* new_index;
+	new_filename(&new_index, new_node, ".index");
+	fs_cp(".beargit/.index", new_index);
+	/* Write go_bears -> .beargit/<commit_id>/.msg */
+	char* new_msg;
+	new_filename(&new_msg, new_node, ".msg");
+	write_string_to_file(new_msg, go_bears);
+	/* For each file in index; copy file -> .beargit/<commit_id>/file */
+	FILE* findex = fopen(".beargit/.index", "r");
+	if (findex == NULL) {
+	      fprintf(stderr, "fopen error\n");
+	      exit(1);
+	}
+	size_t len = FILENAME_SIZE;
+	ssize_t read = 0;
+	char* line = NULL;
+	char* cwd = ".";
+	while ((read = getline(&line, &len, findex)) != -1) {
+		size_t buflen = strlen(line);
+		char fname[buflen];
+		memcpy(fname, line, buflen-1);
+		fname[buflen] = '\0';
+		char* old_leaf = NULL;	
+		new_filename(&old_leaf, cwd, fname);
+		char* new_leaf = NULL;
+		new_filename(&new_leaf, new_node, fname);
+		fs_cp(old_leaf, new_leaf);
+		free(old_leaf);
+		free(new_leaf);
+	}
+	fclose(findex);
+	free(line);
+	/* Write <commit_id> -> .beargit/.prev */
+	write_string_to_file(commit_id, ".beargit/.prev");
+	return 0;
 }
 
 /* beargit log

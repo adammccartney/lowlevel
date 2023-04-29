@@ -14,6 +14,10 @@ int beargit_merge(const char* arg);
 // Helper functions
 int get_branch_number(const char* branch_name);
 void next_commit_id(char* commit_id);
+int is_commit_msg_ok(const char* msg); 
+
+void new_filename(char** bufp, const char* node, const char* leaf); 
+int count_filenames_in_index();
 
 // Number of bytes in a commit id
 #define COMMIT_ID_BYTES SHA_HEX_BYTES

@@ -55,6 +55,31 @@ void simple_sample_test(void)
     CU_ASSERT(0==retval);
 }
 
+void simple_commit_test(void)
+{
+	int retval;
+	const char* sample_commit = "THIS IS BEAR TERRITORY!";
+	retval = is_commit_msg_ok(sample_commit);
+	CU_ASSERT(1==retval);
+	const char* unacceptable_commit = "SOMETHING ELSE";
+	retval = is_commit_msg_ok(unacceptable_commit);
+	CU_ASSERT(1!=retval);
+}
+
+void commit_id_test(void)
+{
+	char *expect = "c70c9e050576b05a640455b4356e2b15ac3c2749";
+	char clean_expect[COMMIT_ID_SIZE];
+	memcpy(clean_expect, expect, COMMIT_ID_SIZE);
+	char *prev = "0000000000000000000000000000000000000000";
+	char commit_id[COMMIT_ID_SIZE];
+	memcpy(commit_id, prev, COMMIT_ID_SIZE);
+	int retval;
+	next_commit_id(commit_id);
+	retval = memcmp(&clean_expect, &commit_id, COMMIT_ID_SIZE);
+	CU_ASSERT(0==retval);
+}
+
 struct commit {
   char msg[MSG_SIZE];
   struct commit* next;
@@ -141,6 +166,7 @@ int cunittester()
 {
    CU_pSuite pSuite = NULL;
    CU_pSuite pSuite2 = NULL;
+   CU_pSuite pSuite3 = NULL;
 
    /* initialize the CUnit test registry */
    if (CUE_SUCCESS != CU_initialize_registry())
@@ -160,17 +186,36 @@ int cunittester()
       return CU_get_error();
    }
 
-   pSuite2 = CU_add_suite("Suite_2", init_suite, clean_suite);
-   if (NULL == pSuite2) {
-      CU_cleanup_registry();
-      return CU_get_error();
+   //pSuite2 = CU_add_suite("Suite_2", init_suite, clean_suite);
+   //if (NULL == pSuite2) {
+   //   CU_cleanup_registry();
+   //   return CU_get_error();
+   //}
+
+   ///* Add tests to the Suite #2 */
+   //if (NULL == CU_add_test(pSuite2, "Log output test", simple_log_test))
+   //{
+   //   CU_cleanup_registry();
+   //   return CU_get_error();
+   //}
+
+   pSuite3 = CU_add_suite("Suite_3", init_suite, clean_suite);
+   if (NULL == pSuite3) {
+	   CU_cleanup_registry();
+	   return CU_get_error();
    }
 
-   /* Add tests to the Suite #2 */
-   if (NULL == CU_add_test(pSuite2, "Log output test", simple_log_test))
+   /* Add tests to the Suite #3 */
+   if (NULL == CU_add_test(pSuite3, "Commit test", simple_commit_test))
    {
-      CU_cleanup_registry();
-      return CU_get_error();
+	   CU_cleanup_registry();
+	   return CU_get_error();
+   }
+
+   if (NULL == CU_add_test(pSuite3, "Commit id test", commit_id_test))
+   {
+	   CU_cleanup_registry();
+	   return CU_get_error();
    }
 
    /* Run all tests using the CUnit Basic interface */
