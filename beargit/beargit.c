@@ -411,9 +411,31 @@ int get_branch_number(const char* branch_name) {
  */
 
 int beargit_branch() {
-  /* COMPLETE THE REST */
+	/* Read current branch */
+	char current_branch[BRANCHNAME_SIZE];
+	read_string_from_file(".beargit/.current_branch", current_branch, BRANCHNAME_SIZE); 
+	size_t len;
+	FILE* fbranches = fopen(".beargit/.branches", "r");
+	if (fbranches == NULL) {
+	        fprintf(stderr, "fopen error\n");
+	        exit(1);
+	}
 
-  return 0;
+	ssize_t read = 0;
+	char* line = NULL;
+	int cmp = 0;
+	while ((read = getline(&line, &len, fbranches)) != -1) {
+		strtok(line, "\n");
+		if ((cmp = memcmp(current_branch, line, strlen(line))) == 0) {
+			printf("*   ");
+		} else {
+			printf("    ");
+		}
+		printf("%s\n", line);
+	}
+	fclose(fbranches);
+
+	return 0;
 }
 
 /* beargit checkout
