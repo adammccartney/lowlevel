@@ -33,10 +33,12 @@
 #define BASEDIR_LEN (8)
 #define ORIG_OFFSET (40)
 #define MAXLINE (2048)
+#define INIT_COMMIT_ID "0000000000000000000000000000000000000000"
 
 #define INDEX_STATE_INIT(r) { \
 	.repo = (r), \
 }
+
 
 struct repository {
 	/* Environment */
@@ -300,29 +302,52 @@ int beargit_commit(const char* msg)
 	      fprintf(stderr, "fopen error\n");
 	      exit(1);
 	}
-	size_t len = FILENAME_SIZE;
-	ssize_t read = 0;
-	char* line = NULL;
+	char line[FILENAME_SIZE];
 	char* cwd = ".";
-	while ((read = getline(&line, &len, findex)) != -1) {
-		size_t buflen = strlen(line);
-		char fname[buflen];
-		memcpy(fname, line, buflen-1);
-		fname[buflen] = '\0';
+	while (fgets(line, sizeof(line), findex)) {
+		strtok(line, "\n");
 		char* old_leaf = NULL;	
-		new_filename(&old_leaf, cwd, fname);
+		new_filename(&old_leaf, cwd, line);
 		char* new_leaf = NULL;
-		new_filename(&new_leaf, new_node, fname);
+		new_filename(&new_leaf, new_node, line);
 		fs_cp(old_leaf, new_leaf);
 		free(old_leaf);
 		free(new_leaf);
 	}
 	fclose(findex);
-	free(line);
 	/* Write <commit_id> -> .beargit/.prev */
-	write_string_to_file(commit_id, ".beargit/.prev");
+	FILE *fnewprev = fopen(".beargit/.newprev", "w");
+	write_string_to_file(".beargit/.newprev", commit_id);
+	fs_mv(".beargit/.newprev", ".beargit/.prev");
+	fclose(fnewprev);
 	return 0;
 }
+
+int is_initial_commit(const char* commit_id)
+{
+	int res = 0;
+	if ((res = memcmp(INIT_COMMIT_ID, commit_id, COMMIT_ID_SIZE)) == 0)
+		return 1;
+	return 0;
+}
+
+/* If ftype is a valid file, 
+ * set string to path 
+ * otherwise set path to NULL */
+void nextf(char** bufp, char* ftype, char* commit_id)
+{
+	char* buf = NULL;
+	buf = malloc(BASEDIR_LEN + ORIG_OFFSET + 8);
+	int res = 0;
+	if ((res = memcmp(".prev", ftype, 6)) == 0)
+		sprintf(buf, ".beargit/%s/.prev", commit_id);
+	if ((res = memcmp(".msg", ftype, 5)) == 0)
+		sprintf(buf, ".beargit/%s/.msg", commit_id);
+	if ((res = memcmp(".index", ftype, 7)) == 0)
+		sprintf(buf, ".beargit/%s/.msg", commit_id);
+	*bufp = buf;
+}
+
 
 /* beargit log
  *
@@ -332,6 +357,28 @@ int beargit_commit(const char* msg)
 
 int beargit_log(int limit) {
   /* COMPLETE THE REST */
+	/* If we find the -n flag, parse the number of log items */
+	/* In a loop, visit each node in the tree of .beargit
+	 * 
+	 * start by reading the previous commit sha from 
+	 * start <commit_id> <- .beargit/.prev
+	 * visit <commit_id> <- .beargit/<commit_id>/.prev
+	 * */
+	char commit_id[COMMIT_ID_SIZE];
+	read_string_from_file(".beargit/.prev", commit_id, COMMIT_ID_SIZE);
+	if (is_initial_commit(commit_id)) {
+	      fprintf(stderr, "ERROR: There are no commits.\n");
+	      exit(1);
+	}
+	int count = 0;
+	while ((!is_initial_commit(commit_id)) && (count < limit)) {
+		printf("commit %s\n", commit_id);
+		printf("    %s\n\n", go_bears);
+		count++;
+		char* fprev;
+		nextf(&fprev, ".prev", commit_id);
+		read_string_from_file(fprev, commit_id, COMMIT_ID_SIZE);
+	}
   return 0;
 }
 
