@@ -15,6 +15,7 @@ int beargit_merge(const char* arg);
 int get_branch_number(const char* branch_name);
 void next_commit_id(char* commit_id);
 int is_commit_msg_ok(const char* msg); 
+int is_it_a_commit_id(const char* commit_id);
 
 void new_filename(char** bufp, const char* node, const char* leaf); 
 int count_filenames_in_index();

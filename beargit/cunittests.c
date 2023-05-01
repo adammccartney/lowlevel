@@ -105,6 +105,17 @@ void run_commit(struct commit** commit_list, const char* msg) {
     *commit_list = new_commit;
 }
 
+void is_commit_id_test(void)
+{
+	char* valid = "a7ae6c637bce2616e85d392da64f22cb5ea55e1d";
+	int rc = 0;
+	rc = is_it_a_commit_id(valid);
+	CU_ASSERT(1==rc);
+	char* invalid = "a7ae622";
+	rc = is_it_a_commit_id(invalid);
+	CU_ASSERT(0==rc);
+}
+
 void simple_log_test(void)
 {
     struct commit* commit_list = NULL;
@@ -186,18 +197,27 @@ int cunittester()
       return CU_get_error();
    }
 
-   //pSuite2 = CU_add_suite("Suite_2", init_suite, clean_suite);
-   //if (NULL == pSuite2) {
-   //   CU_cleanup_registry();
-   //   return CU_get_error();
-   //}
+   pSuite2 = CU_add_suite("Suite_2", init_suite, clean_suite);
+   if (NULL == pSuite2) {
+      CU_cleanup_registry();
+      return CU_get_error();
+   }
 
-   ///* Add tests to the Suite #2 */
-   //if (NULL == CU_add_test(pSuite2, "Log output test", simple_log_test))
-   //{
-   //   CU_cleanup_registry();
-   //   return CU_get_error();
-   //}
+   /* Add tests to the Suite #2 */
+   if (NULL == CU_add_test(pSuite2, "Log output test", simple_log_test))
+   {
+      CU_cleanup_registry();
+      return CU_get_error();
+   }
+
+
+   if (NULL == CU_add_test(pSuite2, "Regex check of commit id", is_commit_id_test))
+   {
+      CU_cleanup_registry();
+      return CU_get_error();
+   }
+
+
 
    pSuite3 = CU_add_suite("Suite_3", init_suite, clean_suite);
    if (NULL == pSuite3) {
