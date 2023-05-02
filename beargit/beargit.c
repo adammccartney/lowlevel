@@ -237,8 +237,7 @@ int beargit_rm(const char* filename) {
 const char* go_bears = "THIS IS BEAR TERRITORY!";
 
 int is_commit_msg_ok(const char* msg) {
-	const int msg_len = 24;
-	if (memcmp(go_bears, msg, msg_len) != 0)
+	if (memcmp(go_bears, msg, strlen(go_bears)) != 0)
 		return 0;
 	return 1;
 }
@@ -250,20 +249,19 @@ int is_commit_msg_ok(const char* msg) {
  * You will need to use a function we have provided for you.
  */
 
-void next_commit_id(char* commit_id) {
-	/* TODO: make this ever so slightly less dumb 
-	 * Append the contents of each tracked file to the buffer before hashing */
-     char buffer[ORIG_OFFSET + MSG_LENGTH + BRANCHNAME_SIZE];
-     unsigned int size;
-     /* Take the commit_id and prepend it to the front of the buffer */
-     memcpy(&buffer, commit_id, ORIG_OFFSET);
-     /* Copy commit msg to the remaining space in buffer */
-     memcpy(&buffer[ORIG_OFFSET], go_bears, MSG_LENGTH);
-     char current_branch[BRANCHNAME_SIZE];
-     read_string_from_file(".beargit/.current_branch", current_branch, BRANCHNAME_SIZE); 
-     memcpy(&buffer[ORIG_OFFSET + MSG_LENGTH], current_branch, BRANCHNAME_SIZE);
-     /* Hash the commit */
-     cryptohash((const char *)&buffer, commit_id);
+void next_commit_id(char* commit_id) 
+{
+	char buffer[MSG_SIZE];
+	/* Take the commit_id and prepend it to the front of the buffer */
+	memcpy(&buffer, commit_id, ORIG_OFFSET);
+	/* Append commit msg to buffer */
+	memcpy(&buffer[ORIG_OFFSET], go_bears, MSG_LENGTH);
+	/* Append branch name to buffer */
+	char current_branch[BRANCHNAME_SIZE];
+	read_string_from_file(".beargit/.current_branch", current_branch, BRANCHNAME_SIZE); 
+	memcpy(&buffer[ORIG_OFFSET + MSG_LENGTH], current_branch, BRANCHNAME_SIZE);
+	/* Hash the commit */
+	cryptohash((const char *)&buffer, commit_id);
 }
 
 void new_filename(char** bufp, const char* node, const char* leaf)
@@ -275,34 +273,8 @@ void new_filename(char** bufp, const char* node, const char* leaf)
 	*bufp = buf;
 }
 
-int beargit_commit(const char* msg) 
+static void copy_files_to_tree(const char* new_node)
 {
-	if (!is_commit_msg_ok(msg)) {
-		fprintf(stderr, "ERROR:  Message must contain \"%s\"\n", go_bears);
-		return 1;
-	}
-
-	char commit_id[COMMIT_ID_SIZE];
-	read_string_from_file(".beargit/.prev", commit_id, COMMIT_ID_SIZE);
-	next_commit_id(commit_id);
-
-	/* COMPLETE THE REST */
-	/* Create directory .beargit/<commit_id> */
-	char new_node[BASEDIR_LEN + COMMIT_ID_SIZE + 1];
-	sprintf(new_node, ".beargit/%s", commit_id);
-	fs_mkdir(new_node); 
-	/* Copy .beargit/.prev -> .beargit/<commit_id>/.prev */
-	char* new_prev;
-	new_filename(&new_prev, new_node, ".prev");
-	fs_cp(".beargit/.prev", new_prev); 
-	/* Copy .beargit/.index -> .beargit/<commit_id>/.index */
-	char* new_index;
-	new_filename(&new_index, new_node, ".index");
-	fs_cp(".beargit/.index", new_index);
-	/* Write go_bears -> .beargit/<commit_id>/.msg */
-	char* new_msg;
-	new_filename(&new_msg, new_node, ".msg");
-	write_string_to_file(new_msg, go_bears);
 	/* For each file in index; copy file -> .beargit/<commit_id>/file */
 	FILE* findex = fopen(".beargit/.index", "r");
 	if (findex == NULL) {
@@ -322,6 +294,40 @@ int beargit_commit(const char* msg)
 		free(new_leaf);
 	}
 	fclose(findex);
+}
+
+int beargit_commit(const char* msg) 
+{
+	if (!is_commit_msg_ok(msg)) {
+		fprintf(stderr, "ERROR:  Message must contain \"%s\"\n", go_bears);
+		return 1;
+	}
+
+	char commit_id[COMMIT_ID_SIZE];
+	read_string_from_file(".beargit/.prev", commit_id, COMMIT_ID_SIZE);
+	next_commit_id(commit_id);
+
+	/* Create directory .beargit/<commit_id> */
+	char new_node[BASEDIR_LEN + COMMIT_ID_SIZE + 1];
+	sprintf(new_node, ".beargit/%s", commit_id);
+	fs_mkdir(new_node); 
+
+	/* Copy .beargit/.prev -> .beargit/<commit_id>/.prev */
+	char* new_prev;
+	new_filename(&new_prev, new_node, ".prev");
+	fs_cp(".beargit/.prev", new_prev); 
+	
+	/* Copy .beargit/.index -> .beargit/<commit_id>/.index */
+	char* new_index;
+	new_filename(&new_index, new_node, ".index");
+	fs_cp(".beargit/.index", new_index);
+
+	/* Write go_bears -> .beargit/<commit_id>/.msg */
+	char* new_msg;
+	new_filename(&new_msg, new_node, ".msg");
+	write_string_to_file(new_msg, go_bears);
+	copy_files_to_tree(new_node);
+
 	/* Write <commit_id> -> .beargit/.prev */
 	FILE *fnewprev = fopen(".beargit/.newprev", "w");
 	write_string_to_file(".beargit/.newprev", commit_id);
