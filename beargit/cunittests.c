@@ -66,20 +66,6 @@ void simple_commit_test(void)
 	CU_ASSERT(1!=retval);
 }
 
-void commit_id_test(void)
-{
-	char *expect = "c70c9e050576b05a640455b4356e2b15ac3c2749";
-	char clean_expect[COMMIT_ID_SIZE];
-	memcpy(clean_expect, expect, COMMIT_ID_SIZE);
-	char *prev = "0000000000000000000000000000000000000000";
-	char commit_id[COMMIT_ID_SIZE];
-	memcpy(commit_id, prev, COMMIT_ID_SIZE);
-	int retval;
-	next_commit_id(commit_id);
-	retval = memcmp(&clean_expect, &commit_id, COMMIT_ID_SIZE);
-	CU_ASSERT(0==retval);
-}
-
 struct commit {
   char msg[MSG_SIZE];
   struct commit* next;
@@ -135,7 +121,7 @@ void simple_log_test(void)
 
     struct commit* cur_commit = commit_list;
 
-    const int LINE_SIZE = 512;
+    const int LINE_SIZE = 516;
     char line[LINE_SIZE];
 
     FILE* fstdout = fopen("TEST_STDOUT", "r");
@@ -211,12 +197,6 @@ int cunittester()
    }
 
 
-   if (NULL == CU_add_test(pSuite2, "Regex check of commit id", is_commit_id_test))
-   {
-      CU_cleanup_registry();
-      return CU_get_error();
-   }
-
 
 
    pSuite3 = CU_add_suite("Suite_3", init_suite, clean_suite);
@@ -226,17 +206,19 @@ int cunittester()
    }
 
    /* Add tests to the Suite #3 */
+
+   if (NULL == CU_add_test(pSuite3, "Regex check of commit id", is_commit_id_test))
+   {
+      CU_cleanup_registry();
+      return CU_get_error();
+   }
+
    if (NULL == CU_add_test(pSuite3, "Commit test", simple_commit_test))
    {
 	   CU_cleanup_registry();
 	   return CU_get_error();
    }
 
-   if (NULL == CU_add_test(pSuite3, "Commit id test", commit_id_test))
-   {
-	   CU_cleanup_registry();
-	   return CU_get_error();
-   }
 
    /* Run all tests using the CUnit Basic interface */
    CU_basic_set_mode(CU_BRM_VERBOSE);

@@ -36,39 +36,6 @@
 #define ORIG_OFFSET (40)
 #define MAXLINE (2048)
 #define INIT_COMMIT_ID "0000000000000000000000000000000000000000"
-#define ARRAY_SIZE(arr) (sizeof((arr)) / sizeof((arr)[0]))
-
-#define INDEX_STATE_INIT(r) { \
-	.repo = (r), \
-}
-
-
-struct repository {
-	/* Environment */
-	/*
-	 * Path to the git directory.
-	 * Cannot be NULL after initialization.
-	 */
-	char *gitdir;
-	/*
-	 * Path to the current worktree's index file.
-	 * Cannot be NULL after initialization.
-	 */
-	char *index_file;
-	/*
-	 * Path to the working directory.
-	 * A NULL value indicates that there is no working directory.
-	 */
-	char *worktree;
-	/*
-	 * Repository's in-memory index.
-	 * 'repo_read_index()' can be used to populate 'index'.
-	 */
-	struct index_state *index;
-};
-
-struct index_state {
-};
 
 /* beargit init
  *
@@ -264,15 +231,6 @@ void next_commit_id(char* commit_id)
 	cryptohash((const char *)&buffer, commit_id);
 }
 
-void new_filename(char** bufp, const char* node, const char* leaf)
-{
-	size_t size = strlen(leaf) + 1;
-	char* buf; 
-	buf = malloc(BASEDIR_LEN + ORIG_OFFSET + size);
-	sprintf(buf, "%s/%s", node, leaf);
-	*bufp = buf;
-}
-
 static void copy_files_to_tree(const char* new_node)
 {
 	/* For each file in index; copy file -> .beargit/<commit_id>/file */
@@ -285,13 +243,11 @@ static void copy_files_to_tree(const char* new_node)
 	char* cwd = ".";
 	while (fgets(line, sizeof(line), findex)) {
 		strtok(line, "\n");
-		char* old_leaf = NULL;	
-		new_filename(&old_leaf, cwd, line);
-		char* new_leaf = NULL;
-		new_filename(&new_leaf, new_node, line);
+		char old_leaf[FILENAME_SIZE + 4];	
+		snprintf(old_leaf, FILENAME_SIZE + 4, "./%s", line);
+		char new_leaf [FILENAME_SIZE + 4];
+		snprintf(new_leaf, FILENAME_SIZE + 4, "%s/%s", new_node, line);
 		fs_cp(old_leaf, new_leaf);
-		free(old_leaf);
-		free(new_leaf);
 	}
 	fclose(findex);
 }
@@ -313,18 +269,18 @@ int beargit_commit(const char* msg)
 	fs_mkdir(new_node); 
 
 	/* Copy .beargit/.prev -> .beargit/<commit_id>/.prev */
-	char* new_prev;
-	new_filename(&new_prev, new_node, ".prev");
+	char new_prev[FILENAME_SIZE];
+	snprintf(new_prev, FILENAME_SIZE, "%s/.prev", new_node);
 	fs_cp(".beargit/.prev", new_prev); 
 	
 	/* Copy .beargit/.index -> .beargit/<commit_id>/.index */
-	char* new_index;
-	new_filename(&new_index, new_node, ".index");
+	char new_index[FILENAME_SIZE];
+	snprintf(new_index, FILENAME_SIZE, "%s/.index", new_node);
 	fs_cp(".beargit/.index", new_index);
 
 	/* Write go_bears -> .beargit/<commit_id>/.msg */
-	char* new_msg;
-	new_filename(&new_msg, new_node, ".msg");
+	char new_msg[FILENAME_SIZE];
+	snprintf(new_msg, FILENAME_SIZE, "%s/.msg", new_node); 
 	write_string_to_file(new_msg, go_bears);
 	copy_files_to_tree(new_node);
 
@@ -357,7 +313,7 @@ void nextf(char** bufp, char* ftype, char* commit_id)
 	if ((res = memcmp(".msg", ftype, 5)) == 0)
 		sprintf(buf, ".beargit/%s/.msg", commit_id);
 	if ((res = memcmp(".index", ftype, 7)) == 0)
-		sprintf(buf, ".beargit/%s/.msg", commit_id);
+		sprintf(buf, ".beargit/%s/.index", commit_id);
 	*bufp = buf;
 }
 
@@ -499,10 +455,10 @@ int checkout_commit(const char* commit_id) {
 		strtok(line, "\n");
 		/* foreach file in ".beargit/<commit_id>/.index */
 	        /*   do copy ".beargit/<commit_id>/file" -> "./file" */
-		char* indexf;
-		new_filename(&indexf, commit_node, line);
-		char* checkoutf; /* ./<line> */
-		new_filename(&checkoutf, repo_root, line);
+		char indexf[FILENAME_SIZE];
+		snprintf(indexf, FILENAME_SIZE, "%s/%s", commit_node, line);
+		char checkoutf[FILENAME_SIZE]; /* ./<line> */
+		snprintf(checkoutf, FILENAME_SIZE, "%s/%s", repo_root, line);
 		fs_cp(indexf, checkoutf);
 	}
 	fclose(findex);
@@ -650,9 +606,9 @@ int beargit_reset(const char* commit_id, const char* filename)
 	/* create string ".beargit/<commit_id>" */
 	char commit_node[BASEDIR_LEN + COMMIT_ID_SIZE + 1];
 	sprintf(commit_node, ".beargit/%s", commit_id);
-	char* fname;
-	new_filename(&fname, commit_node, filename);
-	char target[2 + strlen(filename)];
+	char fname[FILENAME_SIZE];
+	snprintf(fname, FILENAME_SIZE, "%s/%s", commit_node, filename);
+	char target[FILENAME_SIZE];
 	sprintf(target, "./%s", filename);
 	if (!file_exists(fname)) {
 	        fprintf(stderr, "ERROR:  %s is not in the index of commit %s.\n", filename, commit_id);
