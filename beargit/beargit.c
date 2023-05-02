@@ -529,19 +529,6 @@ done:
 	return false;
 }
 
-//int get_cbranchname_size()
-//{
-//	FILE* fcbranch = fopen(".beargit/.current_branch", "r");
-//	char line[BRANCHNAME_SIZE];
-//	int len = 0;
-//	int count = 0;
-//	while (fgets(line, sizeof(line), fcbranch) && (count < 1)) {
-//		len = sizeof(line);
-//		count++;
-//	}
-//	return len;
-//}
-
 int beargit_checkout(const char* arg, int new_branch) {
 
   // Get the current branch
@@ -607,28 +594,69 @@ int beargit_checkout(const char* arg, int new_branch) {
   return checkout_commit(branch_head_commit_id);
 }
 
+int file_exists(char* filename)
+{
+	int true = 1;
+	int false = 0;
+	if (access(filename, F_OK) == 0) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+int file_in_current_index(const char* filename)
+{
+	int true = 1;
+	int false = 0;
+	FILE* findex = fopen(".beargit/.index", "r");
+	if (findex == NULL) {
+	      fprintf(stderr, "fopen error\n");
+	      exit(1);
+	}
+	char line[FILENAME_SIZE];
+	while(fgets(line, sizeof(line), findex)) {
+		strtok(line, "\n");
+		if (memcmp(line, filename, strlen(filename)) == 0)
+			return true;
+	}
+      fclose(findex);
+      return false;
+}
+
 /* beargit reset
  *
  * See "Step 7" in the project spec.
  *
  */
 
-int beargit_reset(const char* commit_id, const char* filename) {
-  if (!is_it_a_commit_id(commit_id)) {
-      fprintf(stderr, "ERROR:  Commit %s does not exist.\n", commit_id);
-      return 1;
-  }
+int beargit_reset(const char* commit_id, const char* filename) 
+{
+	if (!is_it_a_commit_id(commit_id)) {
+		fprintf(stderr, "ERROR:  Commit %s does not exist.\n", commit_id);
+		return 1;
+	}
 
-  // Check if the file is in the commit directory
-  /* COMPLETE THIS PART */
+	// Check if the file is in the commit directory
+	/* create string ".beargit/<commit_id>" */
+	char commit_node[BASEDIR_LEN + COMMIT_ID_SIZE + 1];
+	sprintf(commit_node, ".beargit/%s", commit_id);
+	char* fname;
+	new_filename(&fname, commit_node, filename);
+	char target[2 + strlen(filename)];
+	sprintf(target, "./%s", filename);
+	if (!file_exists(fname)) {
+	        fprintf(stderr, "ERROR:  %s is not in the index of commit %s.\n", filename, commit_id);
+	        return 1;
+	}		
+	// Copy the file to the current working directory
+	fs_cp(fname, target);
 
-  // Copy the file to the current working directory
-  /* COMPLETE THIS PART */
+	// Add the file if it wasn't already there
+	if (!file_in_current_index(filename))
+		beargit_add(filename);
 
-  // Add the file if it wasn't already there
-  /* COMPLETE THIS PART */
-
-  return 0;
+	return 0;
 }
 
 /* beargit merge
