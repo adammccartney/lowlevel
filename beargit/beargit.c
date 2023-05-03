@@ -204,7 +204,8 @@ int beargit_rm(const char* filename) {
 const char* go_bears = "THIS IS BEAR TERRITORY!";
 
 int is_commit_msg_ok(const char* msg) {
-	if (memcmp(go_bears, msg, strlen(go_bears)) != 0)
+	int len = strlen(go_bears);
+	if (memcmp(go_bears, msg, len) != 0)
 		return 0;
 	return 1;
 }
