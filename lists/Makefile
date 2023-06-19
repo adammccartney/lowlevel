@@ -1,16 +1,20 @@
 SHELL := /usr/bin/env bash
 CC := clang
-CFLAGS := -g -Wall -O0 
+CFLAGS := -g -Wall -O0
 
+SOURCES := $(wildcard *.c)
+OBJECTS := $(addprefix , $(notdir $(SOURCES:.c=.o)))
+EXECUTABLES := intro linked_stack
 
-all: intro
+all: $(EXECUTABLES)
 
+%: %.o
+	$(CC) $(CFLAGS) $^ -o $@
 
-intro: intro.c 
-	$(CC) $(CFLAGS) -o intro intro.c
+%.o: %.c
+	$(CC) $(CFLAGS) $^ -o $@
 
-.PHONY: all clean 
-
+.PHONY: all clean
 
 clean:
-	rm -rf intro
+	rm -rf $(EXECUTABLES) 
