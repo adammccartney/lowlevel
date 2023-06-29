@@ -1,0 +1,3 @@
+[submodule "cs61c/labs/su21-lab-starter"]
+	path = cs61c/labs/su21-lab-starter
+	url = git@github.com:adammccartney/su21-lab-starter
