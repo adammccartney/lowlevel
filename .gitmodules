@@ -4,3 +4,6 @@
 [submodule "cs61c/su21-lab-starter"]
 	path = cs61c/su21-lab-starter
 	url = git@github.com:adammccartney/su21-lab-starter.git
+[submodule "cs61c/su23-proj2-starter"]
+	path = cs61c/su23-proj2-starter
+	url = https://github.com/adammccartney/su23-proj2-starter
